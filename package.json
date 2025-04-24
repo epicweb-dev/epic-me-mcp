@@ -1,0 +1,31 @@
+{
+  "name": "epicme-mcp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint --fix .",
+    "format": "prettier --write .",
+    "pretypecheck": "wrangler types ./types/worker-configuration.d.ts",
+    "typecheck": "tsc",
+    "build": "wrangler build",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@epic-web/config": "^1.19.0",
+    "@modelcontextprotocol/inspector": "^0.10.2",
+    "@types/node": "^22.14.1",
+    "eslint": "^9.25.1",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.13.0"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.0.3",
+    "@epic-web/invariant": "^1.0.0",
+    "@epic-web/totp": "^4.0.1",
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "agents": "^0.0.63",
+    "zod": "^3.24.3"
+  },
+  "license": "GPL-3.0-only"
+}
