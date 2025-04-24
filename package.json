@@ -8,7 +8,8 @@
     "pretypecheck": "wrangler types ./types/worker-configuration.d.ts",
     "typecheck": "tsc",
     "build": "wrangler build",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "inspect": "mcp-inspector"
   },
   "devDependencies": {
     "@epic-web/config": "^1.19.0",

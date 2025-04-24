@@ -76,7 +76,7 @@ Please ask them explicitely for this and don't just guess.
 					})
 					await agent.db.createValidationToken(email, grant.id, otp)
 					// TODO: send an actual email
-					console.log(`Email: Here's your EpicMeMCP validation token: ${otp}`)
+					console.log(`Email to ${email}: Here's your EpicMeMCP validation token: ${otp}`)
 					return createReply(
 						`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
 					)
