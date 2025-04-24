@@ -53,7 +53,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
 		agent.server.tool(
 			'authenticate',
-			`Authenticate to your account or create a new account. Only do this when explicitely told to do so.`,
+			`Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
 			{
 				email: z
 					.string()
@@ -62,7 +62,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						`
 The user's email address for their account.
 
-Please ask them explicitely for this and don't just guess.
+Please ask them explicitely for their email address and don't just guess.
 						`.trim(),
 					),
 			},
