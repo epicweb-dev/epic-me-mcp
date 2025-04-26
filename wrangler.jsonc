@@ -3,42 +3,42 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "epic-me-mcp",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-04-17",
-	"compatibility_flags": ["nodejs_compat"],
-	"migrations": [
-		{
-			"new_sqlite_classes": ["EpicMeMCP"],
-			"tag": "v1",
-		},
-	],
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "epic-me-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-04-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "migrations": [
+    {
+      "new_sqlite_classes": ["EpicMeMCP"],
+      "tag": "v1",
+    },
+  ],
 
-	"durable_objects": {
-		"bindings": [
-			{
-				"class_name": "EpicMeMCP",
-				"name": "EPIC_ME_MCP_OBJECT",
-			},
-		],
-	},
-	"observability": {
-		"enabled": true,
-	},
-	"d1_databases": [
-		{
-			"binding": "EPIC_ME_DB",
-			"database_name": "epic-me",
-			"database_id": "6d2e535d-3030-47e5-a571-cbd1fa82f059",
-			"migrations_dir": "src/db/migrations",
-		},
-	],
-	"kv_namespaces": [
-		{
-			"binding": "OAUTH_KV",
-			"id": "OAUTH_KV",
-			"preview_id": "OAUTH_KV",
-		},
-	],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "EpicMeMCP",
+        "name": "EPIC_ME_MCP_OBJECT",
+      },
+    ],
+  },
+  "observability": {
+    "enabled": true,
+  },
+  "d1_databases": [
+    {
+      "binding": "EPIC_ME_DB",
+      "database_name": "epic-me",
+      "database_id": "6d2e535d-3030-47e5-a571-cbd1fa82f059",
+      "migrations_dir": "src/db/migrations",
+    },
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "OAUTH_KV",
+      "preview_id": "OAUTH_KV",
+    },
+  ],
 }
