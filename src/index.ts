@@ -77,10 +77,6 @@ You can also help users add tags to their entries and get all tags for an entry.
   }
 }
 
-const epicMeMcpMount = EpicMeMCP.mount("/mcp", {
-  binding: "EPIC_ME_MCP_OBJECT",
-});
-
 // Default handler for non-MCP routes
 const defaultHandler = {
   fetch: async (request: Request, env: Env) => {
