@@ -1,1 +1,1 @@
-import "@epic-web/config/reset.d.ts";
+import '@epic-web/config/reset.d.ts'
