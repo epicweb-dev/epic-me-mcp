@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "vitest",
     "lint": "eslint --fix .",
     "format": "prettier --write .",
     "pretypecheck": "wrangler types ./types/worker-configuration.d.ts",
@@ -18,7 +19,9 @@
     "@types/node": "^22.15.3",
     "eslint": "^9.25.1",
     "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.3",
+    "vitest": "^3.1.2",
     "wrangler": "^4.13.2"
   },
   "dependencies": {
