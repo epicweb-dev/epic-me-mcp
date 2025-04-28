@@ -84,7 +84,6 @@ const defaultHandler = {
 		if (url.pathname.endsWith('/authorize')) {
 			try {
 				const oauthReqInfo = await env.OAUTH_PROVIDER.parseAuthRequest(request)
-
 				const client = await env.OAUTH_PROVIDER.lookupClient(
 					oauthReqInfo.clientId,
 				)
