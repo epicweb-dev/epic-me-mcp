@@ -1,16 +1,19 @@
 /// <reference path="../types/worker-configuration.d.ts" />
 
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
+import { invariant } from '@epic-web/invariant'
 import {
 	McpServer,
+	type RegisteredResourceTemplate,
+	type RegisteredResource,
 	type RegisteredTool,
 } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { type Connection } from 'agents'
 import { McpAgent } from 'agents/mcp'
 import { DB } from './db'
+import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
 import { type Env } from './types'
-
 type State = { userId: number | null }
 type Props = { grantId: string; grantUserId: string }
 
@@ -19,12 +22,20 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	initialState = { userId: null }
 	unauthenticatedTools: Array<RegisteredTool> = []
 	authenticatedTools: Array<RegisteredTool> = []
+	authenticatedResources: Array<
+		RegisteredResource | RegisteredResourceTemplate
+	> = []
 	server = new McpServer(
 		{
 			name: 'EpicMe',
 			version: '1.0.0',
 		},
 		{
+			capabilities: {
+				tools: {},
+				resources: {},
+				completions: {},
+			},
 			instructions: `
 EpicMe is a journaling app that allows users to write about and review their experiences, thoughts, and reflections.
 
@@ -47,33 +58,44 @@ You can also help users add tags to their entries and get all tags for an entry.
 		const user = await this.db.getUserByGrantId(this.props.grantId)
 		this.setState({ userId: user?.id ?? null })
 		await initializeTools(this)
+		await initializeResources(this)
 	}
 
 	onStateUpdate(state: State | undefined, source: Connection | 'server') {
+		const result = super.onStateUpdate(state, source)
 		if (source === 'server') {
-			void this.updateAvailableTools()
+			void this.updateAvailableItems()
 		}
-		return super.onStateUpdate(state, source)
+		return result
 	}
 
-	async updateAvailableTools() {
-		console.log('TODO: make dynamic tools work')
-		// let user = this.state.userId
-		// 	? await this.db.getUserById(this.state.userId)
-		// 	: null
-		// if (user) {
-		// 	console.log('updating to authenticated tools', { user })
-		// } else {
-		// 	console.log('updating to unauthenticated tools', { user })
-		// }
-		// for (const tool of this.unauthenticatedTools) {
-		// 	if (user && tool.enabled) tool.disable()
-		// 	else if (!user && !tool.enabled) tool.enable()
-		// }
-		// for (const tool of this.authenticatedTools) {
-		// 	if (user && !tool.enabled) tool.enable()
-		// 	else if (!user && tool.enabled) tool.disable()
-		// }
+	async requireUser() {
+		const { grantId } = this.props
+		invariant(grantId, 'You must be logged in to perform this action')
+		const user = await this.db.getUserByGrantId(grantId)
+		invariant(
+			user,
+			`No user found with the given grantId. Please claim the grant by invoking the "authenticate" tool.`,
+		)
+		return user
+	}
+
+	async updateAvailableItems() {
+		let user = this.state.userId
+			? await this.db.getUserById(this.state.userId)
+			: null
+		for (const tool of this.unauthenticatedTools) {
+			if (user && tool.enabled) tool.disable()
+			else if (!user && !tool.enabled) tool.enable()
+		}
+		for (const tool of this.authenticatedTools) {
+			if (user && !tool.enabled) tool.enable()
+			else if (!user && tool.enabled) tool.disable()
+		}
+		for (const resource of this.authenticatedResources) {
+			if (user && !resource.enabled) resource.enable()
+			else if (!user && resource.enabled) resource.disable()
+		}
 	}
 }
 

@@ -202,7 +202,7 @@ Please ask them explicitely for their email address and don't just guess.
 			async ({ tagIds }) => {
 				try {
 					const user = await requireUser()
-					const entries = await agent.db.listEntries(user.id, tagIds)
+					const entries = await agent.db.getEntries(user.id, tagIds)
 					return createReply(entries)
 				} catch (error) {
 					return createErrorReply(error)
@@ -326,7 +326,7 @@ Please ask them explicitely for their email address and don't just guess.
 		agent.server.tool('list_tags', 'List all tags', async () => {
 			try {
 				const user = await requireUser()
-				const tags = await agent.db.listTags(user.id)
+				const tags = await agent.db.getTags(user.id)
 				return createReply(tags)
 			} catch (error) {
 				return createErrorReply(error)
@@ -429,22 +429,22 @@ Please ask them explicitely for their email address and don't just guess.
 		)
 		return user
 	}
+}
 
-	function createErrorReply(error: unknown): CallToolResult {
-		console.error(`Failed running tool:\n`, error)
-		return {
-			isError: true,
-			content: [{ type: 'text', text: getErrorMessage(error) }],
-		}
+function createErrorReply(error: unknown): CallToolResult {
+	console.error(`Failed running tool:\n`, error)
+	return {
+		isError: true,
+		content: [{ type: 'text', text: getErrorMessage(error) }],
 	}
+}
 
-	function createReply(text: any): CallToolResult {
-		if (typeof text === 'string') {
-			return { content: [{ type: 'text', text }] }
-		} else {
-			return {
-				content: [{ type: 'text', text: JSON.stringify(text, null, 2) }],
-			}
+function createReply(text: any): CallToolResult {
+	if (typeof text === 'string') {
+		return { content: [{ type: 'text', text }] }
+	} else {
+		return {
+			content: [{ type: 'text', text: JSON.stringify(text, null, 2) }],
 		}
 	}
 }

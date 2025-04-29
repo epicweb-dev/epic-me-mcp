@@ -310,7 +310,7 @@ export class DB {
 		}
 	}
 
-	async listEntries(userId: number, tagIds?: number[]) {
+	async getEntries(userId: number, tagIds?: number[]) {
 		const queryParts = [
 			sql`SELECT DISTINCT e.*, COUNT(et.id) as tag_count`,
 			sql`FROM entries e`,
@@ -458,7 +458,7 @@ export class DB {
 		return tagSchema.parse(snakeToCamel(result))
 	}
 
-	async listTags(userId: number) {
+	async getTags(userId: number) {
 		const results = await this.#db
 			.prepare(
 				sql`
