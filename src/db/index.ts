@@ -310,14 +310,19 @@ export class DB {
 		}
 	}
 
-	async getEntries(userId: number, tagIds?: number[]) {
+	async getEntries(
+		userId: number,
+		tagIds?: number[],
+		from?: string,
+		to?: string,
+	) {
 		const queryParts = [
 			sql`SELECT DISTINCT e.*, COUNT(et.id) as tag_count`,
 			sql`FROM entries e`,
 			sql`LEFT JOIN entry_tags et ON e.id = et.entry_id`,
 			sql`WHERE e.user_id = ?1`,
 		]
-		const params: number[] = [userId]
+		const params: Array<number | string> = [userId]
 
 		if (tagIds && tagIds.length > 0) {
 			queryParts.push(sql`AND EXISTS (
@@ -326,6 +331,16 @@ export class DB {
 				AND et2.tag_id IN (${tagIds.map((_, i) => `?${i + 2}`).join(',')})
 			)`)
 			params.push(...tagIds)
+		}
+
+		if (from) {
+			queryParts.push(sql`AND e.created_at >= ?${String(params.length + 1)}`)
+			params.push(from)
+		}
+
+		if (to) {
+			queryParts.push(sql`AND e.created_at <= ?${String(params.length + 1)}`)
+			params.push(to)
 		}
 
 		queryParts.push(sql`GROUP BY e.id`, sql`ORDER BY e.created_at DESC`)

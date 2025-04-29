@@ -7,10 +7,12 @@ import {
 	type RegisteredResourceTemplate,
 	type RegisteredResource,
 	type RegisteredTool,
+	type RegisteredPrompt,
 } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { type Connection } from 'agents'
 import { McpAgent } from 'agents/mcp'
 import { DB } from './db'
+import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
 import { type Env } from './types'
@@ -25,6 +27,7 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	authenticatedResources: Array<
 		RegisteredResource | RegisteredResourceTemplate
 	> = []
+	authenticatedPrompts: Array<RegisteredPrompt> = []
 	server = new McpServer(
 		{
 			name: 'EpicMe',
@@ -59,6 +62,7 @@ You can also help users add tags to their entries and get all tags for an entry.
 		this.setState({ userId: user?.id ?? null })
 		await initializeTools(this)
 		await initializeResources(this)
+		await initializePrompts(this)
 	}
 
 	onStateUpdate(state: State | undefined, source: Connection | 'server') {
@@ -95,6 +99,10 @@ You can also help users add tags to their entries and get all tags for an entry.
 		for (const resource of this.authenticatedResources) {
 			if (user && !resource.enabled) resource.enable()
 			else if (!user && resource.enabled) resource.disable()
+		}
+		for (const prompt of this.authenticatedPrompts) {
+			if (user && !prompt.enabled) prompt.enable()
+			else if (!user && prompt.enabled) prompt.disable()
 		}
 	}
 }
