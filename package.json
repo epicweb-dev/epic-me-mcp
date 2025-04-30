@@ -22,7 +22,7 @@
     "wrangler": "^4.14.0"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^0.0.4",
+    "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
     "@modelcontextprotocol/sdk": "^1.10.2",
