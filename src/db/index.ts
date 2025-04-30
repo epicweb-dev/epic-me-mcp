@@ -447,7 +447,7 @@ export class DB {
 		`)
 
 		const insertResult = await ps
-			.bind(validatedTag.name, validatedTag.description, userId)
+			.bind(validatedTag.name, validatedTag.description ?? null, userId)
 			.run()
 
 		if (!insertResult.success || !insertResult.meta.last_row_id) {

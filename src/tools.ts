@@ -170,6 +170,11 @@ Please ask them explicitely for their email address and don't just guess.
 
 					const existingTags = await agent.db.getTags(user.id)
 					const existingTagNames = existingTags.map((t) => t.name)
+					const currentTags = await agent.db.getEntryTags(
+						user.id,
+						createdEntry.id,
+					)
+					const currentTagNames = currentTags.map((t) => t.name)
 
 					const result = await agent.server.server.createMessage({
 						messages: [
@@ -179,16 +184,24 @@ Please ask them explicitely for their email address and don't just guess.
 									type: 'text',
 									mimeType: 'text/plain',
 									text: `
-Based on this journal entry, suggest relevant tags. Consider the title, content, mood, location, and weather. Only suggest tags that don't already exist. Here's the entry:
-Title: ${createdEntry.title}
-Content: ${createdEntry.content}
-Mood: ${createdEntry.mood || 'not specified'}
-Location: ${createdEntry.location || 'not specified'}
-Weather: ${createdEntry.weather || 'not specified'}
+Based on this journal entry, suggest relevant tags. Consider the title, content, mood, location, and weather. Only suggest tags that are not already applied to this entry. Feel free to suggest new tags that are not currently in the database and they will be created.
 
-Existing tags: ${existingTagNames.join(', ')}
+<entry
+	id="${createdEntry.id}"
+	title="${createdEntry.title}"
+	mood="${createdEntry.mood || 'not specified'}"
+	location="${createdEntry.location || 'not specified'}"
+	weather="${createdEntry.weather || 'not specified'}"
+	is-private="${createdEntry.isPrivate ? 'true' : 'false'}"
+	is-favorite="${createdEntry.isFavorite ? 'true' : 'false'}"
+	tags="${currentTagNames.join(', ')}"
+>
+	${createdEntry.content}
+</entry>
 
-Respond with a JSON array of tag names only.
+Existing tags already in the database: ${existingTagNames.join(', ')}
+
+Respond with a JSON array of tag names only. If you don't suggest any tags, respond with an empty array.
 									`.trim(),
 								},
 							},
@@ -219,15 +232,17 @@ Respond with a JSON array of tag names only.
 						for (const tagName of newTags) {
 							await agent.db.createTag(user.id, { name: tagName })
 						}
+					}
 
-						const createdTags = await agent.db.getTags(user.id)
+					const userTags = await agent.db.getTags(user.id)
 
-						for (const tag of createdTags) {
-							await agent.db.addTagToEntry(user.id, {
-								entryId: createdEntry.id,
-								tagId: tag.id,
-							})
-						}
+					for (const tag of userTags.filter((t) =>
+						suggestedTags.includes(t.name),
+					)) {
+						await agent.db.addTagToEntry(user.id, {
+							entryId: createdEntry.id,
+							tagId: tag.id,
+						})
 					}
 
 					return createReply({

@@ -71,7 +71,7 @@ export const tagSchema = z.object({
 
 export const newTagSchema = z.object({
 	name: z.string(),
-	description: z.string().nullable().optional(),
+	description: z.string().optional(),
 })
 
 export const entryTagSchema = z.object({
