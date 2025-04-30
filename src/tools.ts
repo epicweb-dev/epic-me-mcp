@@ -163,9 +163,81 @@ Please ask them explicitely for their email address and don't just guess.
 							})
 						}
 					}
-					return createReply(
-						`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
+
+					// At this point, we're technically done, but we're going to ask their
+					// LLM to suggest tags to be added to the entry.
+					// TODO: make this happen after the response is sent to the user.
+
+					const existingTags = await agent.db.getTags(user.id)
+					const existingTagNames = existingTags.map((t) => t.name)
+
+					const result = await agent.server.server.createMessage({
+						messages: [
+							{
+								role: 'user',
+								content: {
+									type: 'text',
+									mimeType: 'text/plain',
+									text: `
+Based on this journal entry, suggest relevant tags. Consider the title, content, mood, location, and weather. Only suggest tags that don't already exist. Here's the entry:
+Title: ${createdEntry.title}
+Content: ${createdEntry.content}
+Mood: ${createdEntry.mood || 'not specified'}
+Location: ${createdEntry.location || 'not specified'}
+Weather: ${createdEntry.weather || 'not specified'}
+
+Existing tags: ${existingTagNames.join(', ')}
+
+Respond with a JSON array of tag names only.
+									`.trim(),
+								},
+							},
+						],
+						systemPrompt:
+							'You are a helpful assistant that suggests relevant tags for journal entries. Only suggest tags that would be useful for categorizing and finding entries later. Respond with a JSON array of tag names only.',
+						maxTokens: 1000,
+					})
+
+					const responseSchema = z.object({
+						content: z.object({
+							type: z.literal('text'),
+							text: z
+								.string()
+								.transform((text) =>
+									z.array(z.string()).parse(JSON.parse(text)),
+								),
+						}),
+					})
+					const parsedResult = responseSchema.parse(result)
+					const suggestedTags = parsedResult.content.text
+
+					const newTags = suggestedTags.filter(
+						(tag: string) => !existingTagNames.includes(tag),
 					)
+
+					if (newTags.length > 0) {
+						for (const tagName of newTags) {
+							await agent.db.createTag(user.id, { name: tagName })
+						}
+
+						const createdTags = await agent.db.getTags(user.id)
+
+						for (const tag of createdTags) {
+							await agent.db.addTagToEntry(user.id, {
+								entryId: createdEntry.id,
+								tagId: tag.id,
+							})
+						}
+					}
+
+					return createReply({
+						entry: `Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
+						suggestedTags: newTags,
+						message:
+							newTags.length > 0
+								? `Here are some suggested tags for your entry: ${newTags.join(', ')}`
+								: 'No new tags to suggest for this entry.',
+					})
 				} catch (error) {
 					return createErrorReply(error)
 				}
