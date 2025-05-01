@@ -25,7 +25,7 @@ export async function sendEmail(options: {
 	html: string
 	text: string
 }) {
-	const from = 'hello@epicstack.dev'
+	const from = 'hello@epicme.epicai.pro'
 
 	const email = {
 		from,
