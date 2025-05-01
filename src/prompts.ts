@@ -50,6 +50,10 @@ export async function initializePrompts(agent: EpicMeMCP) {
 							],
 						} satisfies GetPromptResult
 					}
+					await agent.server.server.sendLoggingMessage({
+						level: 'info',
+						data: `Summarizing ${entries.length} journal entries`,
+					})
 					return {
 						messages: [
 							{
