@@ -2,7 +2,7 @@ import { invariant } from '@epic-web/invariant'
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { type ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { type EpicMeMCP } from './index.ts'
-import { getErrorMessage } from './utils.ts'
+import { getErrorMessage } from './utils/misc.ts'
 
 export async function initializeResources(agent: EpicMeMCP) {
 	agent.authenticatedResources = [

@@ -1,7 +1,7 @@
 import { type GetPromptResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { type EpicMeMCP } from './index.ts'
-import { getErrorMessage } from './utils.ts'
+import { getErrorMessage } from './utils/misc.ts'
 
 export async function initializePrompts(agent: EpicMeMCP) {
 	agent.authenticatedPrompts = [

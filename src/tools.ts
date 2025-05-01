@@ -3,7 +3,8 @@ import { generateTOTP } from '@epic-web/totp'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { type EpicMeMCP } from './index.ts'
-import { getErrorMessage } from './utils.ts'
+import { sendEmail } from './utils/email.ts'
+import { getErrorMessage } from './utils/misc.ts'
 
 const createEntryInputSchema = {
 	title: z.string().describe('The title of the entry'),
@@ -75,10 +76,12 @@ Please ask them explicitely for their email address and don't just guess.
 						algorithm: 'SHA-512',
 					})
 					await agent.db.createValidationToken(email, grant.id, otp)
-					// TODO: send an actual email
-					console.log(
-						`Email to ${email}: Here's your EpicMeMCP validation token: ${otp}`,
-					)
+					await sendEmail({
+						to: email,
+						subject: 'EpicMeMCP Validation Token',
+						html: `Here's your EpicMeMCP validation token: ${otp}`,
+						text: `Here's your EpicMeMCP validation token: ${otp}`,
+					})
 					return createReply(
 						`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
 					)
