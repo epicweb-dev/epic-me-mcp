@@ -19,14 +19,14 @@
     "eslint": "^9.25.1",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3",
-    "wrangler": "^4.14.0"
+    "wrangler": "^4.14.1"
   },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
-    "@modelcontextprotocol/sdk": "^1.10.2",
-    "agents": "^0.0.75",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "agents": "^0.0.76",
     "zod": "^3.24.3"
   },
   "prettier": "@epic-web/config/prettier",
