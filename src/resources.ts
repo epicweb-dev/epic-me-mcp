@@ -5,6 +5,27 @@ import { type EpicMeMCP } from './index.ts'
 import { getErrorMessage } from './utils/misc.ts'
 
 export async function initializeResources(agent: EpicMeMCP) {
+	agent.server.resource(
+		'credits',
+		'meta://credits',
+		{
+			description: 'Who created the EpicMe project?',
+		},
+		async (uri) => {
+			return {
+				contents: [
+					{
+						mimeType: 'text/plain',
+						text: 'EpicMe was created by Kent C. Dodds',
+						uri: uri.toString(),
+					},
+				],
+			}
+		},
+	)
+
+	agent.unauthenticatedResources = []
+
 	agent.authenticatedResources = [
 		agent.server.resource(
 			'user',

@@ -24,6 +24,9 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	initialState = { userId: null }
 	unauthenticatedTools: Array<RegisteredTool> = []
 	authenticatedTools: Array<RegisteredTool> = []
+	unauthenticatedResources: Array<
+		RegisteredResource | RegisteredResourceTemplate
+	> = []
 	authenticatedResources: Array<
 		RegisteredResource | RegisteredResourceTemplate
 	> = []
@@ -35,9 +38,17 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 		},
 		{
 			capabilities: {
-				tools: {},
-				resources: {},
+				tools: {
+					listChanged: true,
+				},
+				resources: {
+					subscribe: true,
+					listChanged: true,
+				},
 				completions: {},
+				prompts: {
+					listChanged: true,
+				},
 				logging: {},
 			},
 			instructions: `
@@ -86,6 +97,10 @@ You can also help users add tags to their entries and get all tags for an entry.
 	}
 
 	async updateAvailableItems() {
+		// No clients seem to support this yet...
+		const clientSupport = false
+		if (!clientSupport) return
+
 		let user = this.state.userId
 			? await this.db.getUserById(this.state.userId)
 			: null
@@ -98,6 +113,10 @@ You can also help users add tags to their entries and get all tags for an entry.
 			else if (!user && tool.enabled) tool.disable()
 		}
 		for (const resource of this.authenticatedResources) {
+			if (user && !resource.enabled) resource.enable()
+			else if (!user && resource.enabled) resource.disable()
+		}
+		for (const resource of this.unauthenticatedResources) {
 			if (user && !resource.enabled) resource.enable()
 			else if (!user && resource.enabled) resource.disable()
 		}

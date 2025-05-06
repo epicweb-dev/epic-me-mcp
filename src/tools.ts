@@ -122,6 +122,7 @@ Please ask them explicitely for their email address and don't just guess.
 	]
 
 	agent.authenticatedTools = [
+		// TODO: remove this once clients are better at handling resources
 		agent.server.tool(
 			'whoami',
 			'Get information about the currently logged in user',
