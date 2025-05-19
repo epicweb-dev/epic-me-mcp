@@ -1,8 +1,6 @@
 import { invariant } from '@epic-web/invariant'
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { type ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { type EpicMeMCP } from './index.ts'
-import { getErrorMessage } from './utils/misc.ts'
 
 export async function initializeResources(agent: EpicMeMCP) {
 	agent.server.resource(
@@ -62,23 +60,19 @@ export async function initializeResources(agent: EpicMeMCP) {
 					}
 				},
 			}),
-			{ description: 'A single entry' },
+			{ description: 'A journal entry' },
 			async (uri, { id }) => {
-				try {
-					const user = await agent.requireUser()
-					const entry = await agent.db.getEntry(user.id, Number(id))
-					invariant(entry, `Entry with ID "${id}" not found`)
-					return {
-						contents: [
-							{
-								mimeType: 'application/json',
-								text: JSON.stringify(entry),
-								uri: uri.toString(),
-							},
-						],
-					}
-				} catch (error) {
-					return createErrorReply(uri, error)
+				const user = await agent.requireUser()
+				const entry = await agent.db.getEntry(user.id, Number(id))
+				invariant(entry, `Entry with ID "${id}" not found`)
+				return {
+					contents: [
+						{
+							mimeType: 'application/json',
+							uri: uri.toString(),
+							text: JSON.stringify(entry),
+						},
+					],
 				}
 			},
 		),
@@ -98,39 +92,21 @@ export async function initializeResources(agent: EpicMeMCP) {
 					}
 				},
 			}),
-			{ description: 'A single tag' },
+			{ description: 'A journal tag' },
 			async (uri, { id }) => {
-				try {
-					const user = await agent.requireUser()
-					const tag = await agent.db.getTag(user.id, Number(id))
-					invariant(tag, `Tag with ID "${id}" not found`)
-					return {
-						contents: [
-							{
-								mimeType: 'application/json',
-								text: JSON.stringify(tag),
-								uri: uri.toString(),
-							},
-						],
-					}
-				} catch (error) {
-					return createErrorReply(uri, error)
+				const user = await agent.requireUser()
+				const tag = await agent.db.getTag(user.id, Number(id))
+				invariant(tag, `Tag with ID "${id}" not found`)
+				return {
+					contents: [
+						{
+							mimeType: 'application/json',
+							text: JSON.stringify(tag),
+							uri: uri.toString(),
+						},
+					],
 				}
 			},
 		),
 	]
-}
-
-function createErrorReply(uri: URL, error: unknown): ReadResourceResult {
-	console.error(`Failed running resource:\n`, error)
-	return {
-		isError: true,
-		contents: [
-			{
-				mimeType: 'text/plain',
-				text: getErrorMessage(error),
-				uri: uri.toString(),
-			},
-		],
-	}
 }

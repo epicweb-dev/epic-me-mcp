@@ -88,6 +88,50 @@ export const newEntryTagSchema = z.object({
 	tagId: z.number(),
 })
 
+export const createEntryInputSchema = {
+	title: z.string().describe('The title of the entry'),
+	content: z.string().describe('The content of the entry'),
+	mood: z
+		.string()
+		.optional()
+		.describe(
+			'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
+		),
+	location: z
+		.string()
+		.optional()
+		.describe(
+			'The location of the entry (for example: "home", "work", "school", "park")',
+		),
+	weather: z
+		.string()
+		.optional()
+		.describe(
+			'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
+		),
+	isPrivate: z
+		.number()
+		.optional()
+		.default(1)
+		.describe('Whether the entry is private (1 for private, 0 for public)'),
+	isFavorite: z
+		.number()
+		.optional()
+		.default(0)
+		.describe(
+			'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
+		),
+	tags: z
+		.array(z.number())
+		.optional()
+		.describe('The IDs of the tags to add to the entry'),
+}
+
+export const createTagInputSchema = {
+	name: z.string().describe('The name of the tag'),
+	description: z.string().optional().describe('The description of the tag'),
+}
+
 export type Entry = z.infer<typeof entrySchema>
 export type NewEntry = z.infer<typeof newEntrySchema>
 export type Tag = z.infer<typeof tagSchema>

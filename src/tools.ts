@@ -2,53 +2,9 @@ import { invariant } from '@epic-web/invariant'
 import { generateTOTP } from '@epic-web/totp'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
+import { createEntryInputSchema, createTagInputSchema } from './db/schema.ts'
 import { type EpicMeMCP } from './index.ts'
 import { sendEmail } from './utils/email.ts'
-import { getErrorMessage } from './utils/misc.ts'
-
-const createEntryInputSchema = {
-	title: z.string().describe('The title of the entry'),
-	content: z.string().describe('The content of the entry'),
-	mood: z
-		.string()
-		.optional()
-		.describe(
-			'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
-		),
-	location: z
-		.string()
-		.optional()
-		.describe(
-			'The location of the entry (for example: "home", "work", "school", "park")',
-		),
-	weather: z
-		.string()
-		.optional()
-		.describe(
-			'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
-		),
-	isPrivate: z
-		.number()
-		.optional()
-		.default(1)
-		.describe('Whether the entry is private (1 for private, 0 for public)'),
-	isFavorite: z
-		.number()
-		.optional()
-		.default(0)
-		.describe(
-			'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
-		),
-	tags: z
-		.array(z.number())
-		.optional()
-		.describe('The IDs of the tags to add to the entry'),
-}
-
-const createTagInputSchema = {
-	name: z.string().describe('The name of the tag'),
-	description: z.string().optional().describe('The description of the tag'),
-}
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
@@ -68,26 +24,22 @@ Please ask them explicitely for their email address and don't just guess.
 					),
 			},
 			async ({ email }) => {
-				try {
-					const grant = await requireGrantId()
-					const { otp } = await generateTOTP({
-						period: 30,
-						digits: 6,
-						algorithm: 'SHA-512',
-					})
-					await agent.db.createValidationToken(email, grant.id, otp)
-					await sendEmail({
-						to: email,
-						subject: 'EpicMeMCP Validation Token',
-						html: `Here's your EpicMeMCP validation token: ${otp}`,
-						text: `Here's your EpicMeMCP validation token: ${otp}`,
-					})
-					return createReply(
-						`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				const grant = await requireGrantId()
+				const { otp } = await generateTOTP({
+					period: 30,
+					digits: 6,
+					algorithm: 'SHA-512',
+				})
+				await agent.db.createValidationToken(email, grant.id, otp)
+				await sendEmail({
+					to: email,
+					subject: 'EpicMeMCP Validation Token',
+					html: `Here's your EpicMeMCP validation token: ${otp}`,
+					text: `Here's your EpicMeMCP validation token: ${otp}`,
+				})
+				return createReply(
+					`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
+				)
 			},
 		),
 
@@ -102,21 +54,17 @@ Please ask them explicitely for their email address and don't just guess.
 					),
 			},
 			async ({ validationToken }) => {
-				try {
-					const grant = await requireGrantId()
-					const user = await agent.db.validateTokenToGrant(
-						grant.id,
-						validationToken,
-					)
+				const grant = await requireGrantId()
+				const user = await agent.db.validateTokenToGrant(
+					grant.id,
+					validationToken,
+				)
 
-					agent.setState({ userId: user.id })
+				agent.setState({ userId: user.id })
 
-					return createReply(
-						`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				return createReply(
+					`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
+				)
 			},
 		),
 	]
@@ -127,12 +75,8 @@ Please ask them explicitely for their email address and don't just guess.
 			'whoami',
 			'Get information about the currently logged in user',
 			async () => {
-				try {
-					const user = await requireUser()
-					return createReply(user)
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				const user = await requireUser()
+				return createReply(user)
 			},
 		),
 
@@ -140,13 +84,9 @@ Please ask them explicitely for their email address and don't just guess.
 			'logout',
 			'Remove authentication information',
 			async () => {
-				try {
-					const user = await requireUser()
-					await agent.db.unclaimGrant(user.id, agent.props.grantId)
-					return createReply('Logout successful')
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				const user = await requireUser()
+				await agent.db.unclaimGrant(user.id, agent.props.grantId)
+				return createReply('Logout successful')
 			},
 		),
 
@@ -156,22 +96,23 @@ Please ask them explicitely for their email address and don't just guess.
 			'Create a new journal entry',
 			createEntryInputSchema,
 			async (entry) => {
-				try {
-					const user = await requireUser()
-					const createdEntry = await agent.db.createEntry(user.id, entry)
-					if (entry.tags) {
-						for (const tagId of entry.tags) {
-							await agent.db.addTagToEntry(user.id, {
-								entryId: createdEntry.id,
-								tagId,
-							})
-						}
+				const user = await requireUser()
+				const createdEntry = await agent.db.createEntry(user.id, entry)
+				if (entry.tags) {
+					for (const tagId of entry.tags) {
+						await agent.db.addTagToEntry(user.id, {
+							entryId: createdEntry.id,
+							tagId,
+						})
 					}
-					return createReply(
-						`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				}
+				return {
+					content: [
+						createTextContent(
+							`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
+						),
+						createEntryResourceContent(createdEntry),
+					],
 				}
 			},
 		),
@@ -183,13 +124,14 @@ Please ask them explicitely for their email address and don't just guess.
 				id: z.number().describe('The ID of the entry'),
 			},
 			async ({ id }) => {
-				try {
-					const user = await requireUser()
-					const entry = await agent.db.getEntry(user.id, id)
-					invariant(entry, `Entry with ID "${id}" not found`)
-					return createReply(entry)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const entry = await agent.db.getEntry(user.id, id)
+				invariant(entry, `Entry with ID "${id}" not found`)
+				return {
+					content: [
+						createTextContent(JSON.stringify(entry, null, 2)),
+						createEntryResourceContent(entry),
+					],
 				}
 			},
 		),
@@ -204,13 +146,9 @@ Please ask them explicitely for their email address and don't just guess.
 					.describe('Optional array of tag IDs to filter entries by'),
 			},
 			async ({ tagIds }) => {
-				try {
-					const user = await requireUser()
-					const entries = await agent.db.getEntries(user.id, tagIds)
-					return createReply(entries)
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				const user = await requireUser()
+				const entries = await agent.db.getEntries(user.id, tagIds)
+				return createReply(entries)
 			},
 		),
 
@@ -256,16 +194,17 @@ Please ask them explicitely for their email address and don't just guess.
 					),
 			},
 			async ({ id, ...updates }) => {
-				try {
-					const user = await requireUser()
-					const existingEntry = await agent.db.getEntry(user.id, id)
-					invariant(existingEntry, `Entry with ID "${id}" not found`)
-					const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
-					return createReply(
-						`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const existingEntry = await agent.db.getEntry(user.id, id)
+				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
+				return {
+					content: [
+						createTextContent(
+							`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
+						),
+						createEntryResourceContent(updatedEntry),
+					],
 				}
 			},
 		),
@@ -277,16 +216,17 @@ Please ask them explicitely for their email address and don't just guess.
 				id: z.number().describe('The ID of the entry'),
 			},
 			async ({ id }) => {
-				try {
-					const user = await requireUser()
-					const existingEntry = await agent.db.getEntry(user.id, id)
-					invariant(existingEntry, `Entry with ID "${id}" not found`)
-					await agent.db.deleteEntry(user.id, id)
-					return createReply(
-						`Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const existingEntry = await agent.db.getEntry(user.id, id)
+				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				await agent.db.deleteEntry(user.id, id)
+				return {
+					content: [
+						createTextContent(
+							`Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
+						),
+						createEntryResourceContent(existingEntry),
+					],
 				}
 			},
 		),
@@ -297,14 +237,15 @@ Please ask them explicitely for their email address and don't just guess.
 			'Create a new tag',
 			createTagInputSchema,
 			async (tag) => {
-				try {
-					const user = await requireUser()
-					const createdTag = await agent.db.createTag(user.id, tag)
-					return createReply(
-						`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const createdTag = await agent.db.createTag(user.id, tag)
+				return {
+					content: [
+						createTextContent(
+							`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
+						),
+						createTagResourceContent(createdTag),
+					],
 				}
 			},
 		),
@@ -316,25 +257,22 @@ Please ask them explicitely for their email address and don't just guess.
 				id: z.number().describe('The ID of the tag'),
 			},
 			async ({ id }) => {
-				try {
-					const user = await requireUser()
-					const tag = await agent.db.getTag(user.id, id)
-					invariant(tag, `Tag ID "${id}" not found`)
-					return createReply(tag)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const tag = await agent.db.getTag(user.id, id)
+				invariant(tag, `Tag ID "${id}" not found`)
+				return {
+					content: [
+						createTextContent(JSON.stringify(tag, null, 2)),
+						createTagResourceContent(tag),
+					],
 				}
 			},
 		),
 
 		agent.server.tool('list_tags', 'List all tags', async () => {
-			try {
-				const user = await requireUser()
-				const tags = await agent.db.getTags(user.id)
-				return createReply(tags)
-			} catch (error) {
-				return createErrorReply(error)
-			}
+			const user = await requireUser()
+			const tags = await agent.db.getTags(user.id)
+			return createReply(tags)
 		}),
 
 		agent.server.tool(
@@ -350,14 +288,15 @@ Please ask them explicitely for their email address and don't just guess.
 				),
 			},
 			async ({ id, ...updates }) => {
-				try {
-					const user = await requireUser()
-					const updatedTag = await agent.db.updateTag(user.id, id, updates)
-					return createReply(
-						`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const updatedTag = await agent.db.updateTag(user.id, id, updates)
+				return {
+					content: [
+						createTextContent(
+							`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
+						),
+						createTagResourceContent(updatedTag),
+					],
 				}
 			},
 		),
@@ -369,16 +308,17 @@ Please ask them explicitely for their email address and don't just guess.
 				id: z.number().describe('The ID of the tag'),
 			},
 			async ({ id }) => {
-				try {
-					const user = await requireUser()
-					const existingTag = await agent.db.getTag(user.id, id)
-					invariant(existingTag, `Tag ID "${id}" not found`)
-					await agent.db.deleteTag(user.id, id)
-					return createReply(
-						`Tag "${existingTag.name}" (ID: ${id}) deleted successfully`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
+				const user = await requireUser()
+				const existingTag = await agent.db.getTag(user.id, id)
+				invariant(existingTag, `Tag ID "${id}" not found`)
+				await agent.db.deleteTag(user.id, id)
+				return {
+					content: [
+						createTextContent(
+							`Tag "${existingTag.name}" (ID: ${id}) deleted successfully`,
+						),
+						createTagResourceContent(existingTag),
+					],
 				}
 			},
 		),
@@ -392,22 +332,18 @@ Please ask them explicitely for their email address and don't just guess.
 				tagId: z.number().describe('The ID of the tag'),
 			},
 			async ({ entryId, tagId }) => {
-				try {
-					const user = await requireUser()
-					const tag = await agent.db.getTag(user.id, tagId)
-					const entry = await agent.db.getEntry(user.id, entryId)
-					invariant(tag, `Tag ${tagId} not found`)
-					invariant(entry, `Entry with ID "${entryId}" not found`)
-					const entryTag = await agent.db.addTagToEntry(user.id, {
-						entryId,
-						tagId,
-					})
-					return createReply(
-						`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
-					)
-				} catch (error) {
-					return createErrorReply(error)
-				}
+				const user = await requireUser()
+				const tag = await agent.db.getTag(user.id, tagId)
+				const entry = await agent.db.getEntry(user.id, entryId)
+				invariant(tag, `Tag ${tagId} not found`)
+				invariant(entry, `Entry with ID "${entryId}" not found`)
+				const entryTag = await agent.db.addTagToEntry(user.id, {
+					entryId,
+					tagId,
+				})
+				return createReply(
+					`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
+				)
 			},
 		),
 	]
@@ -435,20 +371,46 @@ Please ask them explicitely for their email address and don't just guess.
 	}
 }
 
-function createErrorReply(error: unknown): CallToolResult {
-	console.error(`Failed running tool:\n`, error)
-	return {
-		isError: true,
-		content: [{ type: 'text', text: getErrorMessage(error) }],
-	}
-}
-
-function createReply(text: any): CallToolResult {
+function createReply(text: unknown): CallToolResult {
 	if (typeof text === 'string') {
 		return { content: [{ type: 'text', text }] }
 	} else {
 		return {
 			content: [{ type: 'text', text: JSON.stringify(text, null, 2) }],
 		}
+	}
+}
+
+function createTextContent(text: unknown): CallToolResult['content'][number] {
+	if (typeof text === 'string') {
+		return { type: 'text', text }
+	} else {
+		return { type: 'text', text: JSON.stringify(text, null, 2) }
+	}
+}
+
+type ResourceContent = CallToolResult['content'][number]
+
+// Helper to create an embedded resource content item for an entry
+function createEntryResourceContent(entry: { id: number }): ResourceContent {
+	return {
+		type: 'resource',
+		resource: {
+			uri: `entry://${entry.id}`,
+			mimeType: 'application/json',
+			text: JSON.stringify(entry),
+		},
+	}
+}
+
+// Helper to create an embedded resource content item for a tag
+function createTagResourceContent(tag: { id: number }): ResourceContent {
+	return {
+		type: 'resource',
+		resource: {
+			uri: `tag://${tag.id}`,
+			mimeType: 'application/json',
+			text: JSON.stringify(tag),
+		},
 	}
 }

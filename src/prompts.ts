@@ -1,10 +1,38 @@
 import { type GetPromptResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import { type EpicMeMCP } from './index.ts'
-import { getErrorMessage } from './utils/misc.ts'
 
 export async function initializePrompts(agent: EpicMeMCP) {
 	agent.authenticatedPrompts = [
+		agent.server.prompt(
+			'suggest_tags',
+			'Suggest tags for a journal entry',
+			{
+				entryId: z
+					.string()
+					.describe('The ID of the journal entry to suggest tags for'),
+			},
+			async ({ entryId }) => {
+				return {
+					messages: [
+						{
+							role: 'user',
+							content: {
+								type: 'text',
+								text: `
+Please look up my EpicMe journal entry with ID "${entryId}" using get_entry and look up the tags I have available using list_tags.
+
+Then suggest some tags to add to it. Feel free to suggest new tags I don't have yet.
+
+For each tag I approve, if it does not yet exist, create it with the EpicMe "create_tag" tool. Then add approved tags to the entry with the EpicMe "add_tag_to_entry" tool.
+									`.trim(),
+							},
+						},
+					],
+				}
+			},
+		),
+
 		agent.server.prompt(
 			'summarize-journal-entries',
 			'Summarize your past journal entries, optionally filtered by tags or date range.',
@@ -29,69 +57,49 @@ export async function initializePrompts(agent: EpicMeMCP) {
 					),
 			},
 			async ({ tagIds, from, to }) => {
-				try {
-					const user = await agent.requireUser()
-					const entries = await agent.db.getEntries(
-						user.id,
-						tagIds ? tagIds.split(',').map(Number) : undefined,
-						from,
-						to,
-					)
-					if (entries.length === 0) {
-						return {
-							messages: [
-								{
-									role: 'assistant',
-									content: {
-										type: 'text',
-										text: 'You have no journal entries yet. Would you like to create one?',
-									},
-								},
-							],
-						} satisfies GetPromptResult
-					}
-					await agent.server.server.sendLoggingMessage({
-						level: 'info',
-						data: `Summarizing ${entries.length} journal entries`,
-					})
+				const user = await agent.requireUser()
+				const entries = await agent.db.getEntries(
+					user.id,
+					tagIds ? tagIds.split(',').map(Number) : undefined,
+					from,
+					to,
+				)
+				if (entries.length === 0) {
 					return {
 						messages: [
 							{
-								role: 'user',
+								role: 'assistant',
 								content: {
 									type: 'text',
-									text: `Here are my journal entries:\n\n${entries
-										.map(
-											(entry) =>
-												`- "${entry.title}" (ID: ${entry.id})${
-													entry.tagCount ? ` - ${entry.tagCount} tags` : ''
-												}`,
-										)
-										.join('\n')}\n\nCan you please summarize them for me?`,
+									text: 'You have no journal entries yet. Would you like to create one?',
 								},
 							},
 						],
 					} satisfies GetPromptResult
-				} catch (error) {
-					return createErrorReply(error)
 				}
+				await agent.server.server.sendLoggingMessage({
+					level: 'info',
+					data: `Summarizing ${entries.length} journal entries`,
+				})
+				return {
+					messages: [
+						{
+							role: 'user',
+							content: {
+								type: 'text',
+								text: `Here are my journal entries:\n\n${entries
+									.map(
+										(entry) =>
+											`- "${entry.title}" (ID: ${entry.id})${
+												entry.tagCount ? ` - ${entry.tagCount} tags` : ''
+											}`,
+									)
+									.join('\n')}\n\nCan you please summarize them for me?`,
+							},
+						},
+					],
+				} satisfies GetPromptResult
 			},
 		),
 	]
-}
-
-function createErrorReply(error: unknown): GetPromptResult {
-	console.error(`Failed running prompt:\n`, error)
-	return {
-		isError: true,
-		messages: [
-			{
-				role: 'assistant',
-				content: {
-					type: 'text',
-					text: getErrorMessage(error),
-				},
-			},
-		],
-	}
 }
