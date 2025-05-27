@@ -396,7 +396,7 @@ function createEntryResourceContent(entry: { id: number }): ResourceContent {
 	return {
 		type: 'resource',
 		resource: {
-			uri: `entry://${entry.id}`,
+			uri: `epicme://entries/${entry.id}`,
 			mimeType: 'application/json',
 			text: JSON.stringify(entry),
 		},
@@ -408,7 +408,7 @@ function createTagResourceContent(tag: { id: number }): ResourceContent {
 	return {
 		type: 'resource',
 		resource: {
-			uri: `tag://${tag.id}`,
+			uri: `epicme://tags/${tag.id}`,
 			mimeType: 'application/json',
 			text: JSON.stringify(tag),
 		},

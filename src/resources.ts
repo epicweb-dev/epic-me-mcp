@@ -5,10 +5,8 @@ import { type EpicMeMCP } from './index.ts'
 export async function initializeResources(agent: EpicMeMCP) {
 	agent.server.resource(
 		'credits',
-		'meta://credits',
-		{
-			description: 'Who created the EpicMe project?',
-		},
+		'epicme://credits',
+		{ description: 'Who created the EpicMe project?' },
 		async (uri) => {
 			return {
 				contents: [
@@ -27,10 +25,8 @@ export async function initializeResources(agent: EpicMeMCP) {
 	agent.authenticatedResources = [
 		agent.server.resource(
 			'user',
-			'user://current',
-			{
-				description: 'The currently logged in user',
-			},
+			'epicme://users/current',
+			{ description: 'The currently logged in user' },
 			async (uri) => {
 				const user = await agent.requireUser()
 				return {
@@ -47,14 +43,14 @@ export async function initializeResources(agent: EpicMeMCP) {
 
 		agent.server.resource(
 			'entry',
-			new ResourceTemplate('entry://{id}', {
+			new ResourceTemplate('epicme://entries/{id}', {
 				list: async () => {
 					const user = await agent.requireUser()
 					const entries = await agent.db.getEntries(user.id)
 					return {
 						resources: entries.map((entry) => ({
 							name: entry.title,
-							uri: `entry://${entry.id}`,
+							uri: `epicme://entries/${entry.id}`,
 							mimeType: 'application/json',
 						})),
 					}
@@ -78,15 +74,34 @@ export async function initializeResources(agent: EpicMeMCP) {
 		),
 
 		agent.server.resource(
+			'tags',
+			'epicme://tags',
+			{ description: 'All tags' },
+			async (uri) => {
+				const user = await agent.requireUser()
+				const tags = await agent.db.getTags(user.id)
+				return {
+					contents: [
+						{
+							mimeType: 'application/json',
+							text: JSON.stringify(tags),
+							uri: uri.toString(),
+						},
+					],
+				}
+			},
+		),
+
+		agent.server.resource(
 			'tag',
-			new ResourceTemplate('tag://{id}', {
+			new ResourceTemplate('epicme://tags/{id}', {
 				list: async () => {
 					const user = await agent.requireUser()
 					const tags = await agent.db.getTags(user.id)
 					return {
 						resources: tags.map((tag) => ({
 							name: tag.name,
-							uri: `tag://${tag.id}`,
+							uri: `epicme://tags/${tag.id}`,
 							mimeType: 'application/json',
 						})),
 					}
