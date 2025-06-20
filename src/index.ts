@@ -31,6 +31,8 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 		RegisteredResource | RegisteredResourceTemplate
 	> = []
 	authenticatedPrompts: Array<RegisteredPrompt> = []
+	// @ts-expect-error this is an issue until this is merged: https://github.com/modelcontextprotocol/typescript-sdk/pull/661
+	// and then we can update the package.json to use the new version
 	server = new McpServer(
 		{
 			name: 'EpicMe',

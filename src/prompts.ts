@@ -5,13 +5,16 @@ import { type EpicMeMCP } from './index.ts'
 
 export async function initializePrompts(agent: EpicMeMCP) {
 	agent.authenticatedPrompts = [
-		agent.server.prompt(
+		agent.server.registerPrompt(
 			'suggest_tags',
-			'Suggest tags for a journal entry',
 			{
-				entryId: z
-					.string()
-					.describe('The ID of the journal entry to suggest tags for'),
+				title: 'Suggest Tags',
+				description: 'Suggest tags for a journal entry',
+				argsSchema: {
+					entryId: z
+						.string()
+						.describe('The ID of the journal entry to suggest tags for'),
+				},
 			},
 			async ({ entryId }) => {
 				const user = await requireUser()
@@ -29,13 +32,7 @@ export async function initializePrompts(agent: EpicMeMCP) {
 							role: 'user',
 							content: {
 								type: 'text',
-								text: `
-Below is my EpicMe journal entry with ID "${entryId}" and the tags I have available.
-
-Please suggest some tags to add to it. Feel free to suggest new tags I don't have yet.
-
-For each tag I approve, if it does not yet exist, create it with the EpicMe "create_tag" tool. Then add approved tags to the entry with the EpicMe "add_tag_to_entry" tool.
-								`.trim(),
+								text: `\nBelow is my EpicMe journal entry with ID "${entryId}" and the tags I have available.\n\nPlease suggest some tags to add to it. Feel free to suggest new tags I don't have yet.\n\nFor each tag I approve, if it does not yet exist, create it with the EpicMe "create_tag" tool. Then add approved tags to the entry with the EpicMe "add_tag_to_entry" tool.`.trim(),
 							},
 						},
 						{
@@ -64,29 +61,32 @@ For each tag I approve, if it does not yet exist, create it with the EpicMe "cre
 				}
 			},
 		),
-
-		agent.server.prompt(
+		agent.server.registerPrompt(
 			'summarize-journal-entries',
-			'Summarize your past journal entries, optionally filtered by tags or date range.',
 			{
-				tagIds: z
-					.string()
-					.optional()
-					.describe(
-						'Optional comma-separated set of tag IDs to filter entries by',
-					),
-				from: z
-					.string()
-					.optional()
-					.describe(
-						'Optional date string in YYYY-MM-DD format to filter entries by',
-					),
-				to: z
-					.string()
-					.optional()
-					.describe(
-						'Optional date string in YYYY-MM-DD format to filter entries by',
-					),
+				title: 'Summarize Journal Entries',
+				description:
+					'Summarize your past journal entries, optionally filtered by tags or date range.',
+				argsSchema: {
+					tagIds: z
+						.string()
+						.optional()
+						.describe(
+							'Optional comma-separated set of tag IDs to filter entries by',
+						),
+					from: z
+						.string()
+						.optional()
+						.describe(
+							'Optional date string in YYYY-MM-DD format to filter entries by',
+						),
+					to: z
+						.string()
+						.optional()
+						.describe(
+							'Optional date string in YYYY-MM-DD format to filter entries by',
+						),
+				},
 			},
 			async ({ tagIds, from, to }) => {
 				const user = await agent.requireUser()
@@ -122,9 +122,7 @@ For each tag I approve, if it does not yet exist, create it with the EpicMe "cre
 								text: `Here are my journal entries:\n\n${entries
 									.map(
 										(entry) =>
-											`- "${entry.title}" (ID: ${entry.id})${
-												entry.tagCount ? ` - ${entry.tagCount} tags` : ''
-											}`,
+											`- "${entry.title}" (ID: ${entry.id})${entry.tagCount ? ` - ${entry.tagCount} tags` : ''}`,
 									)
 									.join('\n')}\n\nCan you please summarize them for me?`,
 							},
