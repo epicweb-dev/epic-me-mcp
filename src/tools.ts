@@ -2,7 +2,14 @@ import { invariant } from '@epic-web/invariant'
 import { generateTOTP } from '@epic-web/totp'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import { createEntryInputSchema, createTagInputSchema } from './db/schema.ts'
+import {
+	createEntryInputSchema,
+	createTagInputSchema,
+	entrySchema,
+	entryTagSchema,
+	tagSchema,
+	userSchema,
+} from './db/schema.ts'
 import { type EpicMeMCP } from './index.ts'
 import { sendEmail } from './utils/email.ts'
 
@@ -39,9 +46,13 @@ export async function initializeTools(agent: EpicMeMCP) {
 					html: `Here's your EpicMeMCP validation token: ${otp}`,
 					text: `Here's your EpicMeMCP validation token: ${otp}`,
 				})
-				return createReply(
-					`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
-				)
+				return {
+					content: [
+						createTextContent(
+							`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
+						),
+					],
+				}
 			},
 		),
 		agent.server.registerTool(
@@ -68,9 +79,13 @@ export async function initializeTools(agent: EpicMeMCP) {
 					validationToken,
 				)
 				agent.setState({ userId: user.id })
-				return createReply(
-					`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
-				)
+				return {
+					content: [
+						createTextContent(
+							`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
+						),
+					],
+				}
 			},
 		),
 	]
@@ -85,10 +100,14 @@ export async function initializeTools(agent: EpicMeMCP) {
 					readOnlyHint: true,
 					openWorldHint: false,
 				},
+				outputSchema: { user: userSchema },
 			},
 			async () => {
 				const user = await requireUser()
-				return createReply(user)
+				return {
+					structuredContent: { user },
+					content: [createTextContent(JSON.stringify({ user }, null, 2))],
+				}
 			},
 		),
 		agent.server.registerTool(
@@ -100,11 +119,22 @@ export async function initializeTools(agent: EpicMeMCP) {
 					idempotentHint: true,
 					openWorldHint: false,
 				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+				},
 			},
 			async () => {
 				const user = await requireUser()
 				await agent.db.unclaimGrant(user.id, agent.props.grantId)
-				return createReply('Logout successful')
+				const structuredContent = {
+					success: true,
+					message: 'Logout successful',
+				}
+				return {
+					structuredContent,
+					content: [createTextContent(structuredContent.message)],
+				}
 			},
 		),
 		agent.server.registerTool(
@@ -117,6 +147,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 				inputSchema: createEntryInputSchema,
+				outputSchema: { entry: entrySchema },
 			},
 			async (entry) => {
 				const user = await requireUser()
@@ -130,6 +161,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					}
 				}
 				return {
+					structuredContent: { entry: createdEntry },
 					content: [
 						createTextContent(
 							`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
@@ -151,12 +183,14 @@ export async function initializeTools(agent: EpicMeMCP) {
 				inputSchema: {
 					id: z.number().describe('The ID of the entry'),
 				},
+				outputSchema: { entry: entrySchema },
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const entry = await agent.db.getEntry(user.id, id)
 				invariant(entry, `Entry with ID "${id}" not found`)
 				return {
+					structuredContent: { entry },
 					content: [
 						createTextContent(JSON.stringify(entry, null, 2)),
 						createEntryResourceContent(entry),
@@ -179,11 +213,26 @@ export async function initializeTools(agent: EpicMeMCP) {
 						.optional()
 						.describe('Optional array of tag IDs to filter entries by'),
 				},
+				outputSchema: {
+					entries: z.array(
+						z.object({
+							title: z.string(),
+							id: z.number(),
+							tagCount: z.number(),
+						}),
+					),
+				},
 			},
 			async ({ tagIds }) => {
 				const user = await requireUser()
 				const entries = await agent.db.getEntries(user.id, tagIds)
-				return createReply(entries)
+				const structuredContent = { entries }
+				return {
+					structuredContent,
+					content: [
+						createTextContent(JSON.stringify(structuredContent, null, 2)),
+					],
+				}
 			},
 		),
 		agent.server.registerTool(
@@ -235,6 +284,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 							'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
 						),
 				},
+				outputSchema: { entry: entrySchema },
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
@@ -242,6 +292,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				invariant(existingEntry, `Entry with ID "${id}" not found`)
 				const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
 				return {
+					structuredContent: { entry: updatedEntry },
 					content: [
 						createTextContent(
 							`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
@@ -263,6 +314,11 @@ export async function initializeTools(agent: EpicMeMCP) {
 				inputSchema: {
 					id: z.number().describe('The ID of the entry'),
 				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+					entry: entrySchema.optional(),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
@@ -281,14 +337,24 @@ export async function initializeTools(agent: EpicMeMCP) {
 					},
 				})
 				if (!confirmed) {
-					return createReply('Entry deletion cancelled')
+					return {
+						structuredContent: {
+							success: false,
+							message: 'Entry deletion cancelled',
+						},
+						content: [createTextContent('Entry deletion cancelled')],
+					}
 				}
 				await agent.db.deleteEntry(user.id, id)
+				const structuredContent = {
+					success: true,
+					message: `Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
+					entry: existingEntry,
+				}
 				return {
+					structuredContent,
 					content: [
-						createTextContent(
-							`Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
-						),
+						createTextContent(structuredContent.message),
 						createEntryResourceContent(existingEntry),
 					],
 				}
@@ -304,11 +370,13 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 				inputSchema: createTagInputSchema,
+				outputSchema: { tag: tagSchema },
 			},
 			async (tag) => {
 				const user = await requireUser()
 				const createdTag = await agent.db.createTag(user.id, tag)
 				return {
+					structuredContent: { tag: createdTag },
 					content: [
 						createTextContent(
 							`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
@@ -330,12 +398,14 @@ export async function initializeTools(agent: EpicMeMCP) {
 				inputSchema: {
 					id: z.number().describe('The ID of the tag'),
 				},
+				outputSchema: { tag: tagSchema },
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const tag = await agent.db.getTag(user.id, id)
 				invariant(tag, `Tag ID "${id}" not found`)
 				return {
+					structuredContent: { tag },
 					content: [
 						createTextContent(JSON.stringify(tag, null, 2)),
 						createTagResourceContent(tag),
@@ -352,11 +422,17 @@ export async function initializeTools(agent: EpicMeMCP) {
 					readOnlyHint: true,
 					openWorldHint: false,
 				},
+				outputSchema: {
+					tags: z.array(tagSchema),
+				},
 			},
 			async () => {
 				const user = await requireUser()
 				const tags = await agent.db.getTags(user.id)
-				return createReply(tags)
+				return {
+					structuredContent: { tags },
+					content: [createTextContent(JSON.stringify({ tags }, null, 2))],
+				}
 			},
 		),
 		agent.server.registerTool(
@@ -378,11 +454,13 @@ export async function initializeTools(agent: EpicMeMCP) {
 						]),
 					),
 				},
+				outputSchema: { tag: tagSchema },
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
 				const updatedTag = await agent.db.updateTag(user.id, id, updates)
 				return {
+					structuredContent: { tag: updatedTag },
 					content: [
 						createTextContent(
 							`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
@@ -404,17 +482,26 @@ export async function initializeTools(agent: EpicMeMCP) {
 				inputSchema: {
 					id: z.number().describe('The ID of the tag'),
 				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+					tag: tagSchema,
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const existingTag = await agent.db.getTag(user.id, id)
 				invariant(existingTag, `Tag ID "${id}" not found`)
 				await agent.db.deleteTag(user.id, id)
+				const structuredContent = {
+					success: true,
+					message: `Tag "${existingTag.name}" (ID: ${id}) deleted successfully`,
+					tag: existingTag,
+				}
 				return {
+					structuredContent,
 					content: [
-						createTextContent(
-							`Tag "${existingTag.name}" (ID: ${id}) deleted successfully`,
-						),
+						createTextContent(structuredContent.message),
 						createTagResourceContent(existingTag),
 					],
 				}
@@ -434,6 +521,11 @@ export async function initializeTools(agent: EpicMeMCP) {
 					entryId: z.number().describe('The ID of the entry'),
 					tagId: z.number().describe('The ID of the tag'),
 				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+					entryTag: entryTagSchema,
+				},
 			},
 			async ({ entryId, tagId }) => {
 				const user = await requireUser()
@@ -445,9 +537,15 @@ export async function initializeTools(agent: EpicMeMCP) {
 					entryId,
 					tagId,
 				})
-				return createReply(
-					`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
-				)
+				const structuredContent = {
+					success: true,
+					message: `Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
+					entryTag,
+				}
+				return {
+					structuredContent,
+					content: [createTextContent(structuredContent.message)],
+				}
 			},
 		),
 	]
@@ -472,16 +570,6 @@ export async function initializeTools(agent: EpicMeMCP) {
 			`No user found with the given grantId. Please claim the grant by invoking the "authenticate" tool.`,
 		)
 		return user
-	}
-}
-
-function createReply(text: unknown): CallToolResult {
-	if (typeof text === 'string') {
-		return { content: [{ type: 'text', text }] }
-	} else {
-		return {
-			content: [{ type: 'text', text: JSON.stringify(text, null, 2) }],
-		}
 	}
 }
 
