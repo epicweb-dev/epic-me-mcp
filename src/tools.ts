@@ -8,20 +8,22 @@ import { sendEmail } from './utils/email.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
-		agent.server.tool(
+		agent.server.registerTool(
 			'authenticate',
-			`Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
 			{
-				email: z
-					.string()
-					.email()
-					.describe(
-						`
-The user's email address for their account.
-
-Please ask them explicitely for their email address and don't just guess.
-						`.trim(),
-					),
+				title: 'Authenticate',
+				description: `Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
+				annotations: {
+					destructiveHint: false,
+				},
+				inputSchema: {
+					email: z
+						.string()
+						.email()
+						.describe(
+							`The user's email address for their account.\n\nPlease ask them explicitely for their email address and don't just guess.`,
+						),
+				},
 			},
 			async ({ email }) => {
 				const grant = await requireGrantId()
@@ -42,16 +44,22 @@ Please ask them explicitely for their email address and don't just guess.
 				)
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'validate_token',
-			'Validate a token which was emailed',
 			{
-				validationToken: z
-					.string()
-					.describe(
-						'The validation token the user received in their email inbox from the authenticate tool',
-					),
+				title: 'Validate Token',
+				description: 'Validate a token which was emailed',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					validationToken: z
+						.string()
+						.describe(
+							'The validation token the user received in their email inbox from the authenticate tool',
+						),
+				},
 			},
 			async ({ validationToken }) => {
 				const grant = await requireGrantId()
@@ -59,9 +67,7 @@ Please ask them explicitely for their email address and don't just guess.
 					grant.id,
 					validationToken,
 				)
-
 				agent.setState({ userId: user.id })
-
 				return createReply(
 					`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
 				)
@@ -70,31 +76,48 @@ Please ask them explicitely for their email address and don't just guess.
 	]
 
 	agent.authenticatedTools = [
-		// TODO: remove this once clients are better at handling resources
-		agent.server.tool(
+		agent.server.registerTool(
 			'whoami',
-			'Get information about the currently logged in user',
+			{
+				title: 'Who Am I',
+				description: 'Get information about the currently logged in user',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+			},
 			async () => {
 				const user = await requireUser()
 				return createReply(user)
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'logout',
-			'Remove authentication information',
+			{
+				title: 'Logout',
+				description: 'Remove authentication information',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+			},
 			async () => {
 				const user = await requireUser()
 				await agent.db.unclaimGrant(user.id, agent.props.grantId)
 				return createReply('Logout successful')
 			},
 		),
-
-		// Entry Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'create_entry',
-			'Create a new journal entry',
-			createEntryInputSchema,
+			{
+				title: 'Create Entry',
+				description: 'Create a new journal entry',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: createEntryInputSchema,
+			},
 			async (entry) => {
 				const user = await requireUser()
 				const createdEntry = await agent.db.createEntry(user.id, entry)
@@ -116,12 +139,18 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'get_entry',
-			'Get a journal entry by ID',
 			{
-				id: z.number().describe('The ID of the entry'),
+				title: 'Get Entry',
+				description: 'Get a journal entry by ID',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the entry'),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
@@ -135,15 +164,21 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'list_entries',
-			'List all journal entries',
 			{
-				tagIds: z
-					.array(z.number())
-					.optional()
-					.describe('Optional array of tag IDs to filter entries by'),
+				title: 'List Entries',
+				description: 'List all journal entries',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					tagIds: z
+						.array(z.number())
+						.optional()
+						.describe('Optional array of tag IDs to filter entries by'),
+				},
 			},
 			async ({ tagIds }) => {
 				const user = await requireUser()
@@ -151,47 +186,55 @@ Please ask them explicitely for their email address and don't just guess.
 				return createReply(entries)
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'update_entry',
-			'Update a journal entry. Fields that are not provided (or set to undefined) will not be updated. Fields that are set to null or any other value will be updated.',
 			{
-				id: z.number(),
-				title: z.string().optional().describe('The title of the entry'),
-				content: z.string().optional().describe('The content of the entry'),
-				mood: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
-					),
-				location: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The location of the entry (for example: "home", "work", "school", "park")',
-					),
-				weather: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
-					),
-				isPrivate: z
-					.number()
-					.optional()
-					.describe(
-						'Whether the entry is private (1 for private, 0 for public)',
-					),
-				isFavorite: z
-					.number()
-					.optional()
-					.describe(
-						'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
-					),
+				title: 'Update Entry',
+				description:
+					'Update a journal entry. Fields that are not provided (or set to undefined) will not be updated. Fields that are set to null or any other value will be updated.',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number(),
+					title: z.string().optional().describe('The title of the entry'),
+					content: z.string().optional().describe('The content of the entry'),
+					mood: z
+						.string()
+						.nullable()
+						.optional()
+						.describe(
+							'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
+						),
+					location: z
+						.string()
+						.nullable()
+						.optional()
+						.describe(
+							'The location of the entry (for example: "home", "work", "school", "park")',
+						),
+					weather: z
+						.string()
+						.nullable()
+						.optional()
+						.describe(
+							'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
+						),
+					isPrivate: z
+						.number()
+						.optional()
+						.describe(
+							'Whether the entry is private (1 for private, 0 for public)',
+						),
+					isFavorite: z
+						.number()
+						.optional()
+						.describe(
+							'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
+						),
+				},
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
@@ -208,17 +251,38 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'delete_entry',
-			'Delete a journal entry',
 			{
-				id: z.number().describe('The ID of the entry'),
+				title: 'Delete Entry',
+				description: 'Delete a journal entry',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the entry'),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const existingEntry = await agent.db.getEntry(user.id, id)
 				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				const confirmed = await agent.server.server.elicitInput({
+					message: `Are you sure you want to delete entry "${existingEntry.title}" (ID: ${id})?`,
+					requestedSchema: {
+						type: 'object',
+						properties: {
+							confirmed: {
+								type: 'boolean',
+								description: 'Whether to confirm the entry deletion',
+							},
+						},
+					},
+				})
+				if (!confirmed) {
+					return createReply('Entry deletion cancelled')
+				}
 				await agent.db.deleteEntry(user.id, id)
 				return {
 					content: [
@@ -230,12 +294,17 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		// Tag Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'create_tag',
-			'Create a new tag',
-			createTagInputSchema,
+			{
+				title: 'Create Tag',
+				description: 'Create a new tag',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: createTagInputSchema,
+			},
 			async (tag) => {
 				const user = await requireUser()
 				const createdTag = await agent.db.createTag(user.id, tag)
@@ -249,12 +318,18 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'get_tag',
-			'Get a tag by ID',
 			{
-				id: z.number().describe('The ID of the tag'),
+				title: 'Get Tag',
+				description: 'Get a tag by ID',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the tag'),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
@@ -268,24 +343,41 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool('list_tags', 'List all tags', async () => {
-			const user = await requireUser()
-			const tags = await agent.db.getTags(user.id)
-			return createReply(tags)
-		}),
-
-		agent.server.tool(
-			'update_tag',
-			'Update a tag',
+		agent.server.registerTool(
+			'list_tags',
 			{
-				id: z.number(),
-				...Object.fromEntries(
-					Object.entries(createTagInputSchema).map(([key, value]) => [
-						key,
-						value.nullable().optional(),
-					]),
-				),
+				title: 'List Tags',
+				description: 'List all tags',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+			},
+			async () => {
+				const user = await requireUser()
+				const tags = await agent.db.getTags(user.id)
+				return createReply(tags)
+			},
+		),
+		agent.server.registerTool(
+			'update_tag',
+			{
+				title: 'Update Tag',
+				description: 'Update a tag',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number(),
+					...Object.fromEntries(
+						Object.entries(createTagInputSchema).map(([key, value]) => [
+							key,
+							value.nullable().optional(),
+						]),
+					),
+				},
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
@@ -300,12 +392,18 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'delete_tag',
-			'Delete a tag',
 			{
-				id: z.number().describe('The ID of the tag'),
+				title: 'Delete Tag',
+				description: 'Delete a tag',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the tag'),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
@@ -322,14 +420,20 @@ Please ask them explicitely for their email address and don't just guess.
 				}
 			},
 		),
-
-		// Entry Tag Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'add_tag_to_entry',
-			'Add a tag to an entry',
 			{
-				entryId: z.number().describe('The ID of the entry'),
-				tagId: z.number().describe('The ID of the tag'),
+				title: 'Add Tag to Entry',
+				description: 'Add a tag to an entry',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					entryId: z.number().describe('The ID of the entry'),
+					tagId: z.number().describe('The ID of the tag'),
+				},
 			},
 			async ({ entryId, tagId }) => {
 				const user = await requireUser()
