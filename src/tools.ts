@@ -166,7 +166,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createTextContent(
 							`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
 						),
-						createEntryResourceContent(createdEntry),
+						createEntryResourceLink(createdEntry),
 					],
 				}
 			},
@@ -213,24 +213,15 @@ export async function initializeTools(agent: EpicMeMCP) {
 						.optional()
 						.describe('Optional array of tag IDs to filter entries by'),
 				},
-				outputSchema: {
-					entries: z.array(
-						z.object({
-							title: z.string(),
-							id: z.number(),
-							tagCount: z.number(),
-						}),
-					),
-				},
 			},
 			async ({ tagIds }) => {
 				const user = await requireUser()
 				const entries = await agent.db.getEntries(user.id, tagIds)
-				const structuredContent = { entries }
+				const entryLinks = entries.map(createEntryResourceLink)
 				return {
-					structuredContent,
 					content: [
-						createTextContent(JSON.stringify(structuredContent, null, 2)),
+						createTextContent(`Found ${entries.length} entries.`),
+						...entryLinks,
 					],
 				}
 			},
@@ -297,7 +288,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createTextContent(
 							`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
 						),
-						createEntryResourceContent(updatedEntry),
+						createEntryResourceLink(updatedEntry),
 					],
 				}
 			},
@@ -336,7 +327,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						},
 					},
 				})
-				if (!confirmed) {
+				if (confirmed.action !== 'accept' && confirmed.content?.confirmed) {
 					return {
 						structuredContent: {
 							success: false,
@@ -355,7 +346,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					structuredContent,
 					content: [
 						createTextContent(structuredContent.message),
-						createEntryResourceContent(existingEntry),
+						createEntryResourceLink(existingEntry),
 					],
 				}
 			},
@@ -381,7 +372,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createTextContent(
 							`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
 						),
-						createTagResourceContent(createdTag),
+						createTagResourceLink(createdTag),
 					],
 				}
 			},
@@ -422,16 +413,16 @@ export async function initializeTools(agent: EpicMeMCP) {
 					readOnlyHint: true,
 					openWorldHint: false,
 				},
-				outputSchema: {
-					tags: z.array(tagSchema),
-				},
 			},
 			async () => {
 				const user = await requireUser()
 				const tags = await agent.db.getTags(user.id)
+				const tagLinks = tags.map(createTagResourceLink)
 				return {
-					structuredContent: { tags },
-					content: [createTextContent(JSON.stringify({ tags }, null, 2))],
+					content: [
+						createTextContent(`Found ${tags.length} tags.`),
+						...tagLinks,
+					],
 				}
 			},
 		),
@@ -465,7 +456,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createTextContent(
 							`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
 						),
-						createTagResourceContent(updatedTag),
+						createTagResourceLink(updatedTag),
 					],
 				}
 			},
@@ -502,7 +493,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					structuredContent,
 					content: [
 						createTextContent(structuredContent.message),
-						createTagResourceContent(existingTag),
+						createTagResourceLink(existingTag),
 					],
 				}
 			},
@@ -578,6 +569,39 @@ function createTextContent(text: unknown): CallToolResult['content'][number] {
 		return { type: 'text', text }
 	} else {
 		return { type: 'text', text: JSON.stringify(text, null, 2) }
+	}
+}
+
+type ResourceLinkContent = Extract<
+	CallToolResult['content'][number],
+	{ type: 'resource_link' }
+>
+
+// Helper to create a resource link content item for an entry
+function createEntryResourceLink(entry: {
+	id: number
+	title: string
+}): ResourceLinkContent {
+	return {
+		type: 'resource_link',
+		uri: `epicme://entries/${entry.id}`,
+		name: entry.title,
+		description: `Journal Entry: "${entry.title}"`,
+		mimeType: 'application/json',
+	}
+}
+
+// Helper to create a resource link content item for a tag
+function createTagResourceLink(tag: {
+	id: number
+	name: string
+}): ResourceLinkContent {
+	return {
+		type: 'resource_link',
+		uri: `epicme://tags/${tag.id}`,
+		name: tag.name,
+		description: `Tag: "${tag.name}"`,
+		mimeType: 'application/json',
 	}
 }
 
