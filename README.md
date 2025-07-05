@@ -19,7 +19,7 @@ will also be the basis upon which I will teach how to build MCP tools on
 
 The EpicMe MCP server is deployed at:
 ```
-https://epic-me-mcp.kentcdodds.workers.dev/
+https://epic-me-mcp.kentcdodds.workers.dev/sse
 ```
 
 ### What You Can Do
