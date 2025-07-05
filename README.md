@@ -34,7 +34,7 @@ EpicMe is a personal journaling application that allows you to:
 
 ### Getting Started
 
-1. **Connect to the MCP server** using your preferred MCP client (like [MCP Inspector](https://github.com/modelcontextprotocol/inspector))
+1. **Connect to the MCP server** using your preferred MCP client (like [Claude Desktop](https://claude.ai/download))
 2. **Authenticate** by providing your email address - you'll receive a validation code
 3. **Start journaling** using natural language commands
 
