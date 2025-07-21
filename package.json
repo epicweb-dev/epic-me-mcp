@@ -12,22 +12,22 @@
     "deploy": "wrangler deploy",
     "inspect": "mcp-inspector"
   },
-  "devDependencies": {
-    "@epic-web/config": "^1.21.0",
-    "@modelcontextprotocol/inspector": "^0.14.3",
-    "@types/node": "^24.0.3",
-    "eslint": "^9.29.0",
-    "prettier": "^3.5.3",
-    "typescript": "^5.8.3",
-    "wrangler": "^4.20.3"
-  },
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
-    "@modelcontextprotocol/sdk": "npm:@kentcdodds/tmp-modelcontextprotocol_sdk@1.13.1-alpha.0",
-    "agents": "^0.0.95",
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "agents": "^0.0.109",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@epic-web/config": "^1.21.0",
+    "@modelcontextprotocol/inspector": "^0.16.1",
+    "@types/node": "^24.0.15",
+    "eslint": "^9.31.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.25.0"
   },
   "prettier": "@epic-web/config/prettier",
   "license": "GPL-3.0-only"
