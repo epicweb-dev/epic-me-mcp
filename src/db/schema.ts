@@ -50,6 +50,10 @@ export const entrySchema = z.object({
 	updatedAt: timestampSchema,
 })
 
+export const entryWithTagsSchema = entrySchema.extend({
+	tags: z.array(z.object({ id: z.number(), name: z.string() })),
+})
+
 export const newEntrySchema = z.object({
 	title: z.string(),
 	content: z.string(),
@@ -71,7 +75,11 @@ export const tagSchema = z.object({
 
 export const newTagSchema = z.object({
 	name: z.string(),
-	description: z.string().nullable().optional(),
+	description: z
+		.string()
+		.nullable()
+		.optional()
+		.transform((val) => val ?? null),
 })
 
 export const entryTagSchema = z.object({
@@ -87,6 +95,13 @@ export const newEntryTagSchema = z.object({
 	entryId: z.number(),
 	tagId: z.number(),
 })
+
+export const entryIdSchema = { id: z.number().describe('The ID of the entry') }
+export const tagIdSchema = { id: z.number().describe('The ID of the tag') }
+export const entryTagIdSchema = {
+	entryId: z.number().describe('The ID of the entry'),
+	tagId: z.number().describe('The ID of the tag'),
+}
 
 export const createEntryInputSchema = {
 	title: z.string().describe('The title of the entry'),
@@ -127,9 +142,56 @@ export const createEntryInputSchema = {
 		.describe('The IDs of the tags to add to the entry'),
 }
 
+export const updateEntryInputSchema = {
+	id: z.number(),
+	title: z.string().optional().describe('The title of the entry'),
+	content: z.string().optional().describe('The content of the entry'),
+	mood: z
+		.string()
+		.nullable()
+		.optional()
+		.describe(
+			'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
+		),
+	location: z
+		.string()
+		.nullable()
+		.optional()
+		.describe(
+			'The location of the entry (for example: "home", "work", "school", "park")',
+		),
+	weather: z
+		.string()
+		.nullable()
+		.optional()
+		.describe(
+			'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
+		),
+	isPrivate: z
+		.number()
+		.optional()
+		.describe('Whether the entry is private (1 for private, 0 for public)'),
+	isFavorite: z
+		.number()
+		.optional()
+		.describe(
+			'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
+		),
+}
+
 export const createTagInputSchema = {
 	name: z.string().describe('The name of the tag'),
 	description: z.string().optional().describe('The description of the tag'),
+}
+
+export const updateTagInputSchema = {
+	id: z.number(),
+	...Object.fromEntries(
+		Object.entries(createTagInputSchema).map(([key, value]) => [
+			key,
+			value.nullable().optional(),
+		]),
+	),
 }
 
 export type Entry = z.infer<typeof entrySchema>
@@ -138,3 +200,4 @@ export type Tag = z.infer<typeof tagSchema>
 export type NewTag = z.infer<typeof newTagSchema>
 export type EntryTag = z.infer<typeof entryTagSchema>
 export type NewEntryTag = z.infer<typeof newEntryTagSchema>
+export type EntryWithTags = z.infer<typeof entryWithTagsSchema>

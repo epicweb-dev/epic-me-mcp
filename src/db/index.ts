@@ -438,7 +438,7 @@ export class DB {
 	}
 
 	// Tag Methods
-	async createTag(userId: number, tag: NewTag) {
+	async createTag(userId: number, tag: z.input<typeof newTagSchema>) {
 		const validatedTag = newTagSchema.parse(tag)
 
 		const ps = this.#db.prepare(sql`

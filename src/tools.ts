@@ -2,26 +2,40 @@ import { invariant } from '@epic-web/invariant'
 import { generateTOTP } from '@epic-web/totp'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import { createEntryInputSchema, createTagInputSchema } from './db/schema.ts'
+import {
+	createEntryInputSchema,
+	createTagInputSchema,
+	entrySchema,
+	entryTagSchema,
+	updateEntryInputSchema,
+	tagSchema,
+	userSchema,
+	updateTagInputSchema,
+	tagIdSchema,
+	entryTagIdSchema,
+} from './db/schema.ts'
 import { type EpicMeMCP } from './index.ts'
+import { suggestTagsSampling } from './sampling.ts'
 import { sendEmail } from './utils/email.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
-		agent.server.tool(
+		agent.server.registerTool(
 			'authenticate',
-			`Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
 			{
-				email: z
-					.string()
-					.email()
-					.describe(
-						`
-The user's email address for their account.
-
-Please ask them explicitely for their email address and don't just guess.
-						`.trim(),
-					),
+				title: 'Authenticate',
+				description: `Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
+				annotations: {
+					destructiveHint: false,
+				},
+				inputSchema: {
+					email: z
+						.string()
+						.email()
+						.describe(
+							`The user's email address for their account.\n\nPlease ask them explicitely for their email address and don't just guess.`,
+						),
+				},
 			},
 			async ({ email }) => {
 				const grant = await requireGrantId()
@@ -37,21 +51,31 @@ Please ask them explicitely for their email address and don't just guess.
 					html: `Here's your EpicMeMCP validation token: ${otp}`,
 					text: `Here's your EpicMeMCP validation token: ${otp}`,
 				})
-				return createReply(
-					`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
-				)
+				return {
+					content: [
+						createText(
+							`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
+						),
+					],
+				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'validate_token',
-			'Validate a token which was emailed',
 			{
-				validationToken: z
-					.string()
-					.describe(
-						'The validation token the user received in their email inbox from the authenticate tool',
-					),
+				title: 'Validate Token',
+				description: 'Validate a token which was emailed',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					validationToken: z
+						.string()
+						.describe(
+							'The validation token the user received in their email inbox from the authenticate tool',
+						),
+				},
 			},
 			async ({ validationToken }) => {
 				const grant = await requireGrantId()
@@ -59,42 +83,77 @@ Please ask them explicitely for their email address and don't just guess.
 					grant.id,
 					validationToken,
 				)
-
 				agent.setState({ userId: user.id })
-
-				return createReply(
-					`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
-				)
+				return {
+					content: [
+						createText(
+							`The user's token has been validated as the owner of the account "${user.email}" (ID: ${user.id}). The user can now execute authenticated tools.`,
+						),
+					],
+				}
 			},
 		),
 	]
 
 	agent.authenticatedTools = [
-		// TODO: remove this once clients are better at handling resources
-		agent.server.tool(
+		agent.server.registerTool(
 			'whoami',
-			'Get information about the currently logged in user',
+			{
+				title: 'Who Am I',
+				description: 'Get information about the currently logged in user',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				outputSchema: { user: userSchema },
+			},
 			async () => {
 				const user = await requireUser()
-				return createReply(user)
+				return {
+					structuredContent: { user },
+					content: [createText(JSON.stringify({ user }, null, 2))],
+				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'logout',
-			'Remove authentication information',
+			{
+				title: 'Logout',
+				description: 'Remove authentication information',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+				},
+			},
 			async () => {
 				const user = await requireUser()
 				await agent.db.unclaimGrant(user.id, agent.props.grantId)
-				return createReply('Logout successful')
+				const structuredContent = {
+					success: true,
+					message: 'Logout successful',
+				}
+				return {
+					structuredContent,
+					content: [createText(structuredContent.message)],
+				}
 			},
 		),
-
-		// Entry Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'create_entry',
-			'Create a new journal entry',
-			createEntryInputSchema,
+			{
+				title: 'Create Entry',
+				description: 'Create a new journal entry',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: createEntryInputSchema,
+				outputSchema: { entry: entrySchema },
+			},
 			async (entry) => {
 				const user = await requireUser()
 				const createdEntry = await agent.db.createEntry(user.id, entry)
@@ -106,92 +165,92 @@ Please ask them explicitely for their email address and don't just guess.
 						})
 					}
 				}
+
+				void suggestTagsSampling(user.id, agent, createdEntry.id)
+
 				return {
+					structuredContent: { entry: createdEntry },
 					content: [
-						createTextContent(
+						createText(
 							`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
 						),
-						createEntryResourceContent(createdEntry),
+						createEntryResourceLink(createdEntry),
 					],
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'get_entry',
-			'Get a journal entry by ID',
 			{
-				id: z.number().describe('The ID of the entry'),
+				title: 'Get Entry',
+				description: 'Get a journal entry by ID',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the entry'),
+				},
+				outputSchema: { entry: entrySchema },
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const entry = await agent.db.getEntry(user.id, id)
 				invariant(entry, `Entry with ID "${id}" not found`)
+				const structuredContent = { entry }
 				return {
+					structuredContent,
 					content: [
-						createTextContent(JSON.stringify(entry, null, 2)),
-						createEntryResourceContent(entry),
+						createEntryResourceLink(entry),
+						createText(structuredContent),
 					],
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'list_entries',
-			'List all journal entries',
 			{
-				tagIds: z
-					.array(z.number())
-					.optional()
-					.describe('Optional array of tag IDs to filter entries by'),
+				title: 'List Entries',
+				description: 'List all journal entries',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					tagIds: z
+						.array(z.number())
+						.optional()
+						.describe('Optional array of tag IDs to filter entries by'),
+				},
 			},
 			async ({ tagIds }) => {
 				const user = await requireUser()
 				const entries = await agent.db.getEntries(user.id, tagIds)
-				return createReply(entries)
+				const entryLinks = entries.map(createEntryResourceLink)
+				const structuredContent = { entries }
+				return {
+					structuredContent,
+					content: [
+						createText(`Found ${entries.length} entries.`),
+						...entryLinks,
+						createText(structuredContent),
+					],
+				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'update_entry',
-			'Update a journal entry. Fields that are not provided (or set to undefined) will not be updated. Fields that are set to null or any other value will be updated.',
 			{
-				id: z.number(),
-				title: z.string().optional().describe('The title of the entry'),
-				content: z.string().optional().describe('The content of the entry'),
-				mood: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The mood of the entry (for example: "happy", "sad", "anxious", "excited")',
-					),
-				location: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The location of the entry (for example: "home", "work", "school", "park")',
-					),
-				weather: z
-					.string()
-					.nullable()
-					.optional()
-					.describe(
-						'The weather of the entry (for example: "sunny", "cloudy", "rainy", "snowy")',
-					),
-				isPrivate: z
-					.number()
-					.optional()
-					.describe(
-						'Whether the entry is private (1 for private, 0 for public)',
-					),
-				isFavorite: z
-					.number()
-					.optional()
-					.describe(
-						'Whether the entry is a favorite (1 for favorite, 0 for not favorite)',
-					),
+				title: 'Update Entry',
+				description:
+					'Update a journal entry. Fields that are not provided (or set to undefined) will not be updated. Fields that are set to null or any other value will be updated.',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: updateEntryInputSchema,
+				outputSchema: { entry: entrySchema },
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
@@ -199,137 +258,232 @@ Please ask them explicitely for their email address and don't just guess.
 				invariant(existingEntry, `Entry with ID "${id}" not found`)
 				const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
 				return {
+					structuredContent: { entry: updatedEntry },
 					content: [
-						createTextContent(
+						createText(
 							`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
 						),
-						createEntryResourceContent(updatedEntry),
+						createEntryResourceLink(updatedEntry),
 					],
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'delete_entry',
-			'Delete a journal entry',
 			{
-				id: z.number().describe('The ID of the entry'),
+				title: 'Delete Entry',
+				description: 'Delete a journal entry',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the entry'),
+				},
+				outputSchema: {
+					success: z.boolean(),
+					message: z.string(),
+					entry: entrySchema.optional(),
+				},
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const existingEntry = await agent.db.getEntry(user.id, id)
 				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				const confirmed = await elicitConfirmation(
+					agent,
+					'Are you sure you want to delete this entry?',
+				)
+				if (!confirmed) {
+					return {
+						structuredContent: {
+							success: false,
+							message: 'Entry deletion cancelled',
+						},
+						content: [createText('Entry deletion cancelled')],
+					}
+				}
 				await agent.db.deleteEntry(user.id, id)
+				const structuredContent = {
+					success: true,
+					message: `Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
+					entry: existingEntry,
+				}
 				return {
+					structuredContent,
 					content: [
-						createTextContent(
-							`Entry "${existingEntry.title}" (ID: ${id}) deleted successfully`,
-						),
-						createEntryResourceContent(existingEntry),
+						createText(structuredContent.message),
+						createEntryResourceLink(existingEntry),
 					],
 				}
 			},
 		),
-
-		// Tag Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'create_tag',
-			'Create a new tag',
-			createTagInputSchema,
+			{
+				title: 'Create Tag',
+				description: 'Create a new tag',
+				annotations: {
+					destructiveHint: false,
+					openWorldHint: false,
+				},
+				inputSchema: createTagInputSchema,
+				outputSchema: { tag: tagSchema },
+			},
 			async (tag) => {
 				const user = await requireUser()
 				const createdTag = await agent.db.createTag(user.id, tag)
 				return {
+					structuredContent: { tag: createdTag },
 					content: [
-						createTextContent(
+						createText(
 							`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
 						),
-						createTagResourceContent(createdTag),
+						createTagResourceLink(createdTag),
 					],
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'get_tag',
-			'Get a tag by ID',
 			{
-				id: z.number().describe('The ID of the tag'),
+				title: 'Get Tag',
+				description: 'Get a tag by ID',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					id: z.number().describe('The ID of the tag'),
+				},
+				outputSchema: { tag: tagSchema },
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const tag = await agent.db.getTag(user.id, id)
 				invariant(tag, `Tag ID "${id}" not found`)
+				const structuredContent = { tag }
 				return {
+					structuredContent,
+					content: [createTagResourceLink(tag), createText(structuredContent)],
+				}
+			},
+		),
+		agent.server.registerTool(
+			'list_tags',
+			{
+				title: 'List Tags',
+				description: 'List all tags',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+			},
+			async () => {
+				const user = await requireUser()
+				const tags = await agent.db.getTags(user.id)
+				const tagLinks = tags.map(createTagResourceLink)
+				const structuredContent = { tags }
+				return {
+					structuredContent,
 					content: [
-						createTextContent(JSON.stringify(tag, null, 2)),
-						createTagResourceContent(tag),
+						createText(`Found ${tags.length} tags.`),
+						...tagLinks,
+						createText(structuredContent),
 					],
 				}
 			},
 		),
-
-		agent.server.tool('list_tags', 'List all tags', async () => {
-			const user = await requireUser()
-			const tags = await agent.db.getTags(user.id)
-			return createReply(tags)
-		}),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'update_tag',
-			'Update a tag',
 			{
-				id: z.number(),
-				...Object.fromEntries(
-					Object.entries(createTagInputSchema).map(([key, value]) => [
-						key,
-						value.nullable().optional(),
-					]),
-				),
+				title: 'Update Tag',
+				description: 'Update a tag',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: updateTagInputSchema,
+				outputSchema: { tag: tagSchema },
 			},
 			async ({ id, ...updates }) => {
 				const user = await requireUser()
 				const updatedTag = await agent.db.updateTag(user.id, id, updates)
+				const structuredContent = { tag: updatedTag }
 				return {
+					structuredContent,
 					content: [
-						createTextContent(
+						createText(
 							`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
 						),
-						createTagResourceContent(updatedTag),
+						createTagResourceLink(updatedTag),
+						createText(structuredContent),
 					],
 				}
 			},
 		),
-
-		agent.server.tool(
+		agent.server.registerTool(
 			'delete_tag',
-			'Delete a tag',
 			{
-				id: z.number().describe('The ID of the tag'),
+				title: 'Delete Tag',
+				description: 'Delete a tag',
+				annotations: {
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: tagIdSchema,
+				outputSchema: { success: z.boolean(), tag: tagSchema },
 			},
 			async ({ id }) => {
 				const user = await requireUser()
 				const existingTag = await agent.db.getTag(user.id, id)
 				invariant(existingTag, `Tag ID "${id}" not found`)
+				const confirmed = await elicitConfirmation(
+					agent,
+					`Are you sure you want to delete tag "${existingTag.name}" (ID: ${id})?`,
+				)
+
+				if (!confirmed) {
+					const structuredContent = { success: false, tag: existingTag }
+					return {
+						structuredContent,
+						content: [
+							createText(
+								`Deleting tag "${existingTag.name}" (ID: ${id}) rejected by the user.`,
+							),
+							createTagResourceLink(existingTag),
+							createText(structuredContent),
+						],
+					}
+				}
+
 				await agent.db.deleteTag(user.id, id)
+				const structuredContent = { success: true, tag: existingTag }
 				return {
+					structuredContent,
 					content: [
-						createTextContent(
+						createText(
 							`Tag "${existingTag.name}" (ID: ${id}) deleted successfully`,
 						),
-						createTagResourceContent(existingTag),
+						createTagResourceLink(existingTag),
+						createText(structuredContent),
 					],
 				}
 			},
 		),
-
-		// Entry Tag Tools
-		agent.server.tool(
+		agent.server.registerTool(
 			'add_tag_to_entry',
-			'Add a tag to an entry',
 			{
-				entryId: z.number().describe('The ID of the entry'),
-				tagId: z.number().describe('The ID of the tag'),
+				title: 'Add Tag to Entry',
+				description: 'Add a tag to an entry',
+				annotations: {
+					destructiveHint: false,
+					idempotentHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: entryTagIdSchema,
+				outputSchema: { success: z.boolean(), entryTag: entryTagSchema },
 			},
 			async ({ entryId, tagId }) => {
 				const user = await requireUser()
@@ -341,9 +495,18 @@ Please ask them explicitely for their email address and don't just guess.
 					entryId,
 					tagId,
 				})
-				return createReply(
-					`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
-				)
+				const structuredContent = { success: true, entryTag }
+				return {
+					structuredContent,
+					content: [
+						createText(
+							`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
+						),
+						createTagResourceLink(tag),
+						createEntryResourceLink(entry),
+						createText(structuredContent),
+					],
+				}
 			},
 		),
 	]
@@ -371,46 +534,62 @@ Please ask them explicitely for their email address and don't just guess.
 	}
 }
 
-function createReply(text: unknown): CallToolResult {
-	if (typeof text === 'string') {
-		return { content: [{ type: 'text', text }] }
-	} else {
-		return {
-			content: [{ type: 'text', text: JSON.stringify(text, null, 2) }],
-		}
-	}
-}
-
-function createTextContent(text: unknown): CallToolResult['content'][number] {
+function createText(text: unknown): CallToolResult['content'][number] {
 	if (typeof text === 'string') {
 		return { type: 'text', text }
 	} else {
-		return { type: 'text', text: JSON.stringify(text, null, 2) }
+		return { type: 'text', text: JSON.stringify(text) }
 	}
 }
 
-type ResourceContent = CallToolResult['content'][number]
+type ResourceLinkContent = Extract<
+	CallToolResult['content'][number],
+	{ type: 'resource_link' }
+>
 
-// Helper to create an embedded resource content item for an entry
-function createEntryResourceContent(entry: { id: number }): ResourceContent {
+function createEntryResourceLink(entry: {
+	id: number
+	title: string
+}): ResourceLinkContent {
 	return {
-		type: 'resource',
-		resource: {
-			uri: `epicme://entries/${entry.id}`,
-			mimeType: 'application/json',
-			text: JSON.stringify(entry),
-		},
+		type: 'resource_link',
+		uri: `epicme://entries/${entry.id}`,
+		name: entry.title,
+		description: `Journal Entry: "${entry.title}"`,
+		mimeType: 'application/json',
 	}
 }
 
-// Helper to create an embedded resource content item for a tag
-function createTagResourceContent(tag: { id: number }): ResourceContent {
+function createTagResourceLink(tag: {
+	id: number
+	name: string
+}): ResourceLinkContent {
 	return {
-		type: 'resource',
-		resource: {
-			uri: `epicme://tags/${tag.id}`,
-			mimeType: 'application/json',
-			text: JSON.stringify(tag),
-		},
+		type: 'resource_link',
+		uri: `epicme://tags/${tag.id}`,
+		name: tag.name,
+		description: `Tag: "${tag.name}"`,
+		mimeType: 'application/json',
 	}
+}
+
+async function elicitConfirmation(agent: EpicMeMCP, message: string) {
+	const capabilities = agent.server.server.getClientCapabilities()
+	if (!capabilities?.elicitation) {
+		return true
+	}
+
+	const result = await agent.server.server.elicitInput({
+		message,
+		requestedSchema: {
+			type: 'object',
+			properties: {
+				confirmed: {
+					type: 'boolean',
+					description: 'Whether to confirm the action',
+				},
+			},
+		},
+	})
+	return result.action === 'accept' && result.content?.confirmed === true
 }
