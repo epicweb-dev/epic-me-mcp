@@ -15,6 +15,7 @@ import {
 	entryTagIdSchema,
 } from './db/schema.ts'
 import { type EpicMeMCP } from './index.ts'
+import { suggestTagsSampling } from './sampling.ts'
 import { sendEmail } from './utils/email.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
@@ -164,6 +165,9 @@ export async function initializeTools(agent: EpicMeMCP) {
 						})
 					}
 				}
+
+				void suggestTagsSampling(agent, createdEntry.id)
+
 				return {
 					structuredContent: { entry: createdEntry },
 					content: [
