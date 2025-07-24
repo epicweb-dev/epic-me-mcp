@@ -166,7 +166,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					}
 				}
 
-				void suggestTagsSampling(agent, createdEntry.id)
+				void suggestTagsSampling(user.id, agent, createdEntry.id)
 
 				return {
 					structuredContent: { entry: createdEntry },
