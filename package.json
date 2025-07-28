@@ -21,10 +21,10 @@
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@epic-web/config": "^1.21.0",
-    "@modelcontextprotocol/inspector": "^0.16.1",
+    "@epic-web/config": "^1.21.1",
+    "@modelcontextprotocol/inspector": "^0.16.2",
     "@types/node": "^24.1.0",
-    "eslint": "^9.31.0",
+    "eslint": "^9.32.0",
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
     "wrangler": "^4.26.0"
