@@ -13,29 +13,37 @@ will also be the basis upon which I will teach how to build MCP tools on
 
 ## How to Use
 
-**⚠️ Important Disclaimer: This is an experimental playground, not a production service. There are no SLAs, guarantees of data privacy, or data retention policies. Use at your own risk and don't store anything important or sensitive.**
+**⚠️ Important Disclaimer: This is an experimental playground, not a production
+service. There are no SLAs, guarantees of data privacy, or data retention
+policies. Use at your own risk and don't store anything important or
+sensitive.**
 
 ### Server URL
 
 The EpicMe MCP server is deployed at:
+
 ```
-https://epic-me-mcp.kentcdodds.workers.dev/sse
+https://epic-me-mcp.kentcdodds.workers.dev/mcp
 ```
 
 ### What You Can Do
 
 EpicMe is a personal journaling application that allows you to:
 
-- **Create and manage journal entries** with titles, content, mood, location, weather, and privacy settings
+- **Create and manage journal entries** with titles, content, mood, location,
+  weather, and privacy settings
 - **Organize entries with tags** for better categorization and filtering
 - **Get AI-powered tag suggestions** for your entries
-- **Summarize your journal entries** with optional filtering by tags or date range
+- **Summarize your journal entries** with optional filtering by tags or date
+  range
 - **Mark entries as favorites** and set privacy levels
 
 ### Getting Started
 
-1. **Connect to the MCP server** using your preferred MCP client (like [Claude Desktop](https://claude.ai/download))
-2. **Authenticate** by providing your email address - you'll receive a validation code
+1. **Connect to the MCP server** using your preferred MCP client (like
+   [Claude Desktop](https://claude.ai/download))
+2. **Authenticate** by providing your email address - you'll receive a
+   validation code
 3. **Start journaling** using natural language commands
 
 ### Authentication Flow
@@ -50,21 +58,26 @@ The authentication is unique because it works with users who don't exist yet:
 ### Available Tools
 
 #### Authentication Tools (Unauthenticated)
+
 - **`authenticate`** - Start authentication process with your email
 - **`validate_token`** - Complete authentication with emailed validation code
 
 #### User Management Tools (Authenticated)
+
 - **`whoami`** - Get information about the current user
 - **`logout`** - Remove authentication
 
 #### Journal Entry Tools (Authenticated)
-- **`create_entry`** - Create a new journal entry with optional tags, mood, location, weather
+
+- **`create_entry`** - Create a new journal entry with optional tags, mood,
+  location, weather
 - **`get_entry`** - Retrieve a specific journal entry by ID
 - **`list_entries`** - List all entries, optionally filtered by tags
 - **`update_entry`** - Update any field of an existing entry
 - **`delete_entry`** - Delete a journal entry
 
 #### Tag Management Tools (Authenticated)
+
 - **`create_tag`** - Create a new tag for organizing entries
 - **`get_tag`** - Get details of a specific tag
 - **`list_tags`** - List all your tags
@@ -74,8 +87,10 @@ The authentication is unique because it works with users who don't exist yet:
 
 ### Available Prompts
 
-- **`suggest_tags`** - Get AI-powered tag suggestions for a specific journal entry
-- **`summarize-journal-entries`** - Get a summary of your journal entries, with optional filtering by tags or date range
+- **`suggest_tags`** - Get AI-powered tag suggestions for a specific journal
+  entry
+- **`summarize-journal-entries`** - Get a summary of your journal entries, with
+  optional filtering by tags or date range
 
 ### Available Resources
 
