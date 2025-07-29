@@ -71,12 +71,13 @@ You can also help users add tags to their entries and get all tags for an entry.
 	}
 
 	async init() {
-		envStorage.enterWith(this.env)
-		const user = await this.db.getUserByGrantId(this.props.grantId)
-		this.setState({ userId: user?.id ?? null })
-		await initializeTools(this)
-		await initializeResources(this)
-		await initializePrompts(this)
+		await envStorage.run(this.env, async () => {
+			const user = await this.db.getUserByGrantId(this.props.grantId)
+			this.setState({ userId: user?.id ?? null })
+			await initializeTools(this)
+			await initializeResources(this)
+			await initializePrompts(this)
+		})
 	}
 
 	onStateUpdate(state: State | undefined, source: Connection | 'server') {
