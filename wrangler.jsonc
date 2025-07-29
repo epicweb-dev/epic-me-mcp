@@ -8,10 +8,6 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-17",
 	"compatibility_flags": ["nodejs_compat"],
-	"vars": {
-		"RESEND_API_KEY": "@RESEND_API_KEY",
-		"MOCKS": "@MOCKS",
-	},
 	"migrations": [
 		{
 			"new_sqlite_classes": ["EpicMeMCP"],

@@ -130,7 +130,7 @@ You can also help users add tags to their entries and get all tags for an entry.
 
 // Default handler for non-MCP routes
 const defaultHandler = {
-	fetch: async (request: Request, env: Env) => {
+	fetch: async () => {
 		// Default response for non-authorization requests
 		return new Response('Not Found', { status: 404 })
 	},
