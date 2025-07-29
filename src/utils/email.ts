@@ -1,4 +1,6 @@
+import { invariant } from '@epic-web/invariant'
 import { z } from 'zod'
+import { envStorage } from './env-storage.ts'
 
 const resendErrorSchema = z.union([
 	z.object({
@@ -25,6 +27,9 @@ export async function sendEmail(options: {
 	html: string
 	text: string
 }) {
+	const env = envStorage.getStore()
+	invariant(env, 'env is not set')
+
 	const from = 'hello@epicme.epicai.pro'
 
 	const email = {
@@ -33,7 +38,7 @@ export async function sendEmail(options: {
 	}
 
 	// feel free to remove this condition once you've set up resend
-	if (!process.env.RESEND_API_KEY && !process.env.MOCKS) {
+	if (!env.RESEND_API_KEY && !env.MOCKS) {
 		console.error(`RESEND_API_KEY not set and we're not in mocks mode.`)
 		console.error(
 			`To send emails, set the RESEND_API_KEY environment variable.`,
@@ -49,7 +54,7 @@ export async function sendEmail(options: {
 		method: 'POST',
 		body: JSON.stringify(email),
 		headers: {
-			Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+			Authorization: `Bearer ${env.RESEND_API_KEY}`,
 			'Content-Type': 'application/json',
 		},
 	})

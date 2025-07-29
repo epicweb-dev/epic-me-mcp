@@ -15,7 +15,8 @@ import { DB } from './db'
 import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
-import { type Env } from './types'
+import { envStorage, type Env } from './utils/env-storage.ts'
+
 type State = { userId: number | null }
 type Props = { grantId: string; grantUserId: string }
 
@@ -206,7 +207,7 @@ const oauthProvider = new OAuthProvider({
 })
 
 export default {
-	fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
-		return oauthProvider.fetch(request, env, ctx)
+	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+		return envStorage.run(env, () => oauthProvider.fetch(request, env, ctx))
 	},
 }
