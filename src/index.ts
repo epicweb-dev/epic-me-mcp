@@ -1,5 +1,3 @@
-/// <reference path="../types/worker-configuration.d.ts" />
-
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { invariant } from '@epic-web/invariant'
 import {
@@ -15,7 +13,6 @@ import { DB } from './db'
 import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
-import { envStorage, type Env } from './utils/env-storage.ts'
 
 type State = { userId: number | null }
 type Props = { grantId: string; grantUserId: string }
@@ -71,13 +68,11 @@ You can also help users add tags to their entries and get all tags for an entry.
 	}
 
 	async init() {
-		await envStorage.run(this.env, async () => {
-			const user = await this.db.getUserByGrantId(this.props.grantId)
-			this.setState({ userId: user?.id ?? null })
-			await initializeTools(this)
-			await initializeResources(this)
-			await initializePrompts(this)
-		})
+		const user = await this.db.getUserByGrantId(this.props.grantId)
+		this.setState({ userId: user?.id ?? null })
+		await initializeTools(this)
+		await initializeResources(this)
+		await initializePrompts(this)
 	}
 
 	onStateUpdate(state: State | undefined, source: Connection | 'server') {
@@ -178,18 +173,11 @@ const defaultHandler = {
 
 // Create OAuth provider instance
 const oauthProvider = new OAuthProvider({
-	apiRoute: ['/mcp', '/sse'],
+	apiRoute: ['/mcp'],
 	apiHandler: {
 		// @ts-expect-error
 		fetch(request: Request, env: Env, ctx: ExecutionContext) {
 			const url = new URL(request.url)
-
-			if (url.pathname === '/sse' || url.pathname === '/sse/message') {
-				return EpicMeMCP.serveSSE('/sse', {
-					binding: 'EPIC_ME_MCP_OBJECT',
-				}).fetch(request, env, ctx)
-			}
-
 			if (url.pathname === '/mcp') {
 				return EpicMeMCP.serve('/mcp', { binding: 'EPIC_ME_MCP_OBJECT' }).fetch(
 					request,
@@ -208,8 +196,4 @@ const oauthProvider = new OAuthProvider({
 	clientRegistrationEndpoint: '/oauth/register',
 })
 
-export default {
-	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
-		return envStorage.run(env, () => oauthProvider.fetch(request, env, ctx))
-	},
-}
+export default oauthProvider

@@ -13,21 +13,21 @@
     "inspect": "mcp-inspector"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^0.0.5",
+    "@cloudflare/workers-oauth-provider": "^0.0.6",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
-    "@modelcontextprotocol/sdk": "^1.17.0",
-    "agents": "^0.0.109",
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "agents": "^0.0.111",
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@epic-web/config": "^1.21.1",
-    "@modelcontextprotocol/inspector": "^0.16.2",
-    "@types/node": "^24.1.0",
-    "eslint": "^9.32.0",
+    "@epic-web/config": "^1.21.3",
+    "@modelcontextprotocol/inspector": "^0.16.3",
+    "@types/node": "^24.2.1",
+    "eslint": "^9.33.0",
     "prettier": "^3.6.2",
-    "typescript": "^5.8.3",
-    "wrangler": "^4.26.0"
+    "typescript": "^5.9.2",
+    "wrangler": "^4.28.1"
   },
   "prettier": "@epic-web/config/prettier",
   "license": "GPL-3.0-only"
