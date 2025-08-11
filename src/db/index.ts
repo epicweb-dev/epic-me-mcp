@@ -1,7 +1,4 @@
-/// <reference path="../../types/worker-configuration.d.ts" />
-
 import { z } from 'zod'
-import { type Env } from '../utils/env-storage.ts'
 import { migrate } from './migrations.ts'
 import {
 	type Entry,
