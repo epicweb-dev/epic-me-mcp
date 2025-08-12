@@ -16,6 +16,7 @@
     "@cloudflare/workers-oauth-provider": "^0.0.6",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
+    "@mcp-ui/server": "^5.2.0",
     "@modelcontextprotocol/sdk": "^1.17.2",
     "agents": "^0.0.111",
     "zod": "^3.25.67"

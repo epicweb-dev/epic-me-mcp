@@ -7,19 +7,24 @@ import {
 	type RegisteredTool,
 	type RegisteredPrompt,
 } from '@modelcontextprotocol/sdk/server/mcp.js'
+import {
+	SetLevelRequestSchema,
+	type LoggingLevel,
+} from '@modelcontextprotocol/sdk/types.js'
 import { type Connection } from 'agents'
 import { McpAgent } from 'agents/mcp'
 import { DB } from './db'
 import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
+import { withCors } from './utils.ts'
 
-type State = { userId: number | null }
+type State = { loggingLevel: LoggingLevel }
 type Props = { grantId: string; grantUserId: string }
 
 export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	db!: DB
-	initialState = { userId: null }
+	initialState = { loggingLevel: 'info' as const }
 	unauthenticatedTools: Array<RegisteredTool> = []
 	authenticatedTools: Array<RegisteredTool> = []
 	unauthenticatedResources: Array<
@@ -68,8 +73,16 @@ You can also help users add tags to their entries and get all tags for an entry.
 	}
 
 	async init() {
-		const user = await this.db.getUserByGrantId(this.props.grantId)
-		this.setState({ userId: user?.id ?? null })
+		this.setState({ ...this.state })
+
+		this.server.server.setRequestHandler(
+			SetLevelRequestSchema,
+			async (request) => {
+				this.setState({ ...this.state, loggingLevel: request.params.level })
+				return {}
+			},
+		)
+
 		await initializeTools(this)
 		await initializeResources(this)
 		await initializePrompts(this)
@@ -99,9 +112,8 @@ You can also help users add tags to their entries and get all tags for an entry.
 		const clientSupport = false
 		if (!clientSupport) return
 
-		let user = this.state.userId
-			? await this.db.getUserById(this.state.userId)
-			: null
+		const user = await this.db.getUserByGrantId(this.props.grantId)
+
 		for (const tool of this.unauthenticatedTools) {
 			if (user && tool.enabled) tool.disable()
 			else if (!user && !tool.enabled) tool.enable()
@@ -196,4 +208,8 @@ const oauthProvider = new OAuthProvider({
 	clientRegistrationEndpoint: '/oauth/register',
 })
 
-export default oauthProvider
+export default {
+	fetch: withCors(async (request: Request, env: Env, ctx: ExecutionContext) => {
+		return oauthProvider.fetch(request, env, ctx)
+	}),
+}

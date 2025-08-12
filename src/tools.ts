@@ -1,5 +1,6 @@
 import { invariant } from '@epic-web/invariant'
 import { generateTOTP } from '@epic-web/totp'
+import { createUIResource } from '@mcp-ui/server'
 import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
 import {
@@ -20,6 +21,21 @@ import { sendEmail } from './utils/email.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
+		agent.server.registerTool(
+			'get_logging_level',
+			{
+				title: 'Get Logging Level',
+				description: 'Get the current logging level',
+				annotations: {
+					readOnlyHint: true,
+				},
+			},
+			async () => {
+				return {
+					content: [createText(agent.state.loggingLevel)],
+				}
+			},
+		),
 		agent.server.registerTool(
 			'authenticate',
 			{
@@ -56,6 +72,19 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createText(
 							`The user has been sent an email to ${email} with a validation token. Please have the user submit that token using the validate_token tool.`,
 						),
+						createUIResource({
+							uri: `ui://token-input/${grant.id}`,
+							content: {
+								type: 'rawHtml',
+								htmlString: `
+									<div>
+										<p>Please enter the following token into the input field below:</p>
+										<input type="text" id="token-input" />
+									</div>
+								`,
+							},
+							encoding: 'text',
+						}),
 					],
 				}
 			},
@@ -83,7 +112,6 @@ export async function initializeTools(agent: EpicMeMCP) {
 					grant.id,
 					validationToken,
 				)
-				agent.setState({ userId: user.id })
 				return {
 					content: [
 						createText(
