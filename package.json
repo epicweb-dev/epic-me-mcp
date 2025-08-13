@@ -18,17 +18,17 @@
     "@epic-web/totp": "^4.0.1",
     "@mcp-ui/server": "^5.2.0",
     "@modelcontextprotocol/sdk": "^1.17.2",
-    "agents": "^0.0.111",
+    "agents": "https://pkg.pr.new/cloudflare/agents@408",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@epic-web/config": "^1.21.3",
-    "@modelcontextprotocol/inspector": "0.16.2",
+    "@modelcontextprotocol/inspector": "^0.16.3",
     "@types/node": "^24.2.1",
     "eslint": "^9.33.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
-    "wrangler": "^4.28.1"
+    "wrangler": "^4.29.1"
   },
   "prettier": "@epic-web/config/prettier",
   "license": "GPL-3.0-only"

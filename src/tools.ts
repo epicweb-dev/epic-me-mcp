@@ -22,21 +22,6 @@ import { sendEmail } from './utils/email.ts'
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
 		agent.server.registerTool(
-			'get_logging_level',
-			{
-				title: 'Get Logging Level',
-				description: 'Get the current logging level',
-				annotations: {
-					readOnlyHint: true,
-				},
-			},
-			async () => {
-				return {
-					content: [createText(agent.state.loggingLevel)],
-				}
-			},
-		),
-		agent.server.registerTool(
 			'authenticate',
 			{
 				title: 'Authenticate',
