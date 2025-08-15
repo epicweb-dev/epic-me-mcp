@@ -1,4 +1,9 @@
-import { useState, useEffect, useRef, useReducer } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
+import {
+	callTool,
+	useFormSubmissionCapability,
+	useMcpUiInit,
+} from '#app/utils/mcp.ts'
 import { type Route } from './+types/token-input.tsx'
 
 export async function loader({ request }: { request: Request }) {
@@ -35,64 +40,14 @@ const tokenReducer = (state: TokenState, action: TokenAction): TokenState => {
 	}
 }
 
-export function willSubmitEventFire() {
-	const form = document.createElement('form')
-	form.noValidate = true
-	form.style.display = 'none'
-	document.body.appendChild(form)
-
-	let fired = false
-	form.addEventListener(
-		'submit',
-		(e) => {
-			fired = true
-			e.preventDefault()
-		},
-		{ capture: true, once: true },
-	)
-
-	try {
-		form.requestSubmit() // fires 'submit' synchronously if allowed
-	} finally {
-		form.remove()
-	}
-
-	return fired // true => submit event dispatched (forms allowed)
-}
-
-function useFormSubmissionCapability() {
-	const [canUseOnSubmit, setCanUseOnSubmit] = useState(false)
-
-	useEffect(() => {
-		const canSubmit = willSubmitEventFire()
-		setCanUseOnSubmit(canSubmit)
-	}, [])
-
-	return canUseOnSubmit
-}
-
 export default function TokenInput({ loaderData }: Route.ComponentProps) {
 	const { email } = loaderData
 	const [state, dispatch] = useReducer(tokenReducer, { type: 'idle' })
-	const tokenInputRef = useRef<HTMLInputElement>(null)
 	const formRef = useRef<HTMLFormElement>(null)
 	const abortControllerRef = useRef<AbortController | null>(null)
 	const canUseOnSubmit = useFormSubmissionCapability()
 
-	useEffect(() => {
-		// Focus on input when component mounts
-		if (tokenInputRef.current) {
-			tokenInputRef.current.focus()
-		}
-
-		// Notify parent that iframe is ready
-		window.parent.postMessage({ type: 'ui-lifecycle-iframe-ready' }, '*')
-
-		// Notify parent of initial size
-		requestAnimationFrame(() => {
-			notifyInitialSize()
-		})
-	}, [])
+	useMcpUiInit()
 
 	// Create abort controller for cleanup
 	useEffect(() => {
@@ -102,22 +57,6 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 			abortControllerRef.current?.abort()
 		}
 	}, [])
-
-	function notifyInitialSize() {
-		const height = document.documentElement.scrollHeight
-		const width = document.documentElement.scrollWidth
-
-		window.parent.postMessage(
-			{
-				type: 'ui-size-change',
-				payload: {
-					height: height + 2,
-					width: width,
-				},
-			},
-			'*',
-		)
-	}
 
 	async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
 		e.preventDefault()
@@ -236,7 +175,7 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 							Validation Token:
 						</label>
 						<input
-							ref={tokenInputRef}
+							autoFocus
 							type="text"
 							id="token-input"
 							name="token"
@@ -300,53 +239,4 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 			</div>
 		</div>
 	)
-}
-
-function callTool(
-	toolName: string,
-	params: any,
-	signal?: AbortSignal,
-): Promise<any> {
-	const messageId = crypto.randomUUID()
-
-	return new Promise((resolve, reject) => {
-		if (signal?.aborted) {
-			reject(new Error('Operation aborted'))
-			return
-		}
-
-		// Send tool call with messageId
-		window.parent.postMessage(
-			{
-				type: 'tool',
-				messageId,
-				payload: {
-					toolName,
-					params,
-				},
-			},
-			'*',
-		)
-
-		function handleMessage(event: MessageEvent) {
-			if (event.data.type === 'ui-message-response') {
-				const {
-					messageId: responseMessageId,
-					response,
-					error,
-				} = event.data.payload
-				if (responseMessageId === messageId) {
-					window.removeEventListener('message', handleMessage)
-
-					if (error) {
-						reject(new Error(error))
-					} else {
-						resolve(response)
-					}
-				}
-			}
-		}
-
-		window.addEventListener('message', handleMessage, { signal })
-	})
 }

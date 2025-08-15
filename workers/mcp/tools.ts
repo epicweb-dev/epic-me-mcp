@@ -108,6 +108,38 @@ export async function initializeTools(agent: EpicMeMCP) {
 
 	agent.authenticatedTools = [
 		agent.server.registerTool(
+			'view_journal',
+			{
+				title: 'View Journal',
+				description:
+					'View your journal entries in a beautiful, scrollable interface',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+			},
+			async () => {
+				const user = await requireUser()
+				const baseUrl = agent.props.baseUrl
+				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
+				return {
+					content: [
+						createText(
+							`Here's your journal viewer. You can scroll through your entries and expand them to read the full content.`,
+						),
+						createUIResource({
+							uri: `ui://journal-viewer/${user.id}`,
+							content: {
+								type: 'externalUrl',
+								iframeUrl: uiUrl.toString(),
+							},
+							encoding: 'text',
+						}),
+					],
+				}
+			},
+		),
+		agent.server.registerTool(
 			'whoami',
 			{
 				title: 'Who Am I',
@@ -249,6 +281,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				}
 			},
 		),
+
 		agent.server.registerTool(
 			'update_entry',
 			{
