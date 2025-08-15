@@ -14,10 +14,10 @@ import {
 	updateTagInputSchema,
 	tagIdSchema,
 	entryTagIdSchema,
-} from './db/schema.ts'
+} from '../db/schema.ts'
+import { sendEmail } from '../utils/email.ts'
 import { type EpicMeMCP } from './index.ts'
 import { suggestTagsSampling } from './sampling.ts'
-import { sendEmail } from './utils/email.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools = [
@@ -39,6 +39,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				},
 			},
 			async ({ email }) => {
+				const baseUrl = agent.props.baseUrl
 				const grant = await requireGrantId()
 				const { otp } = await generateTOTP({
 					period: 30,
@@ -52,6 +53,8 @@ export async function initializeTools(agent: EpicMeMCP) {
 					html: `Here's your EpicMeMCP validation token: ${otp}`,
 					text: `Here's your EpicMeMCP validation token: ${otp}`,
 				})
+				const uiUrl = new URL(`/ui/token-input`, baseUrl)
+				uiUrl.searchParams.set('email', email)
 				return {
 					content: [
 						createText(
@@ -60,13 +63,8 @@ export async function initializeTools(agent: EpicMeMCP) {
 						createUIResource({
 							uri: `ui://token-input/${grant.id}`,
 							content: {
-								type: 'rawHtml',
-								htmlString: `
-									<div>
-										<p>Please enter the following token into the input field below:</p>
-										<input type="text" id="token-input" />
-									</div>
-								`,
+								type: 'externalUrl',
+								iframeUrl: uiUrl.toString(),
 							},
 							encoding: 'text',
 						}),
@@ -592,7 +590,7 @@ async function elicitConfirmation(agent: EpicMeMCP, message: string) {
 		return true
 	}
 
-	const result = await agent.server.server.elicitInput({
+	const result = await agent.elicitInput({
 		message,
 		requestedSchema: {
 			type: 'object',

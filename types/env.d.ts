@@ -1,5 +1,6 @@
 // ensure the module is in the program so the merge hits
 import 'cloudflare:workers'
+import { type DB } from '#workers/db/index.ts'
 
 declare global {
 	namespace Cloudflare {
@@ -12,3 +13,19 @@ declare global {
 }
 
 export {}
+
+interface EpicExecutionContext extends ExecutionContext {
+	props: {
+		baseUrl: string
+	}
+}
+
+declare module 'react-router' {
+	export interface AppLoadContext {
+		db: DB
+		cloudflare: {
+			env: Env
+			ctx: EpicExecutionContext
+		}
+	}
+}

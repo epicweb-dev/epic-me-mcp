@@ -1,11 +1,10 @@
-import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { invariant } from '@epic-web/invariant'
 import {
 	McpServer,
-	type RegisteredResourceTemplate,
-	type RegisteredResource,
-	type RegisteredTool,
 	type RegisteredPrompt,
+	type RegisteredResource,
+	type RegisteredResourceTemplate,
+	type RegisteredTool,
 } from '@modelcontextprotocol/sdk/server/mcp.js'
 import {
 	SetLevelRequestSchema,
@@ -13,14 +12,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { type Connection } from 'agents'
 import { McpAgent } from 'agents/mcp'
-import { DB } from './db'
+import { DB } from '../db'
 import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
-import { withCors } from './utils.ts'
 
 type State = { loggingLevel: LoggingLevel }
-type Props = { grantId: string; grantUserId: string }
+type Props = { grantId: string; grantUserId: string; baseUrl: string }
 
 export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	db!: DB
@@ -135,81 +133,4 @@ You can also help users add tags to their entries and get all tags for an entry.
 			else if (!user && prompt.enabled) prompt.disable()
 		}
 	}
-}
-
-// Default handler for non-MCP routes
-const defaultHandler = {
-	fetch: async (request: Request, env: Env) => {
-		const url = new URL(request.url)
-		if (url.pathname.endsWith('/authorize')) {
-			try {
-				const oauthReqInfo = await env.OAUTH_PROVIDER.parseAuthRequest(request)
-
-				const client = await env.OAUTH_PROVIDER.lookupClient(
-					oauthReqInfo.clientId,
-				)
-				if (!client) {
-					return new Response('Invalid client', { status: 400 })
-				}
-
-				const db = await DB.getInstance(env)
-				const grantUserId = crypto.randomUUID()
-				const grantId = await db.createUnclaimedGrant(grantUserId)
-
-				const result = await env.OAUTH_PROVIDER.completeAuthorization({
-					request: oauthReqInfo,
-					// Here's one of the hacks. We don't know who the user is yet since the token at
-					// this point is unclaimed. But completeAuthorization expects a userId.
-					// So we'll generate a random UUID as a temporary userId
-					userId: grantUserId,
-					props: { grantId, grantUserId },
-					scope: ['full'],
-					metadata: { grantDate: new Date().toISOString() },
-				})
-
-				// Redirect to the client with the authorization code
-				return Response.redirect(result.redirectTo)
-			} catch (error) {
-				console.error('Authorization error:', error)
-				return new Response(
-					error instanceof Error ? error.message : 'Authorization failed',
-					{ status: 400 },
-				)
-			}
-		}
-
-		// Default response for non-authorization requests
-		return new Response('Not Found', { status: 404 })
-	},
-}
-
-// Create OAuth provider instance
-const oauthProvider = new OAuthProvider({
-	apiRoute: ['/mcp'],
-	apiHandler: {
-		// @ts-expect-error
-		fetch(request: Request, env: Env, ctx: ExecutionContext) {
-			const url = new URL(request.url)
-			if (url.pathname === '/mcp') {
-				return EpicMeMCP.serve('/mcp', { binding: 'EPIC_ME_MCP_OBJECT' }).fetch(
-					request,
-					env,
-					ctx,
-				)
-			}
-
-			return new Response('Not found', { status: 404 })
-		},
-	},
-	// @ts-expect-error
-	defaultHandler,
-	authorizeEndpoint: '/authorize',
-	tokenEndpoint: '/oauth/token',
-	clientRegistrationEndpoint: '/oauth/register',
-})
-
-export default {
-	fetch: withCors(async (request: Request, env: Env, ctx: ExecutionContext) => {
-		return oauthProvider.fetch(request, env, ctx)
-	}),
 }

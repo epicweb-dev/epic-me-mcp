@@ -2,14 +2,22 @@
   "name": "epicme-mcp",
   "private": true,
   "type": "module",
+  "imports": {
+    "#app/*": "./app/*",
+    "#tests/*": "./tests/*",
+    "#types/*": "./types/*",
+    "#workers/*": "./workers/*"
+  },
   "scripts": {
-    "lint": "eslint --fix .",
+    "build": "react-router build",
+    "deploy": "npm run build && wrangler deploy",
+    "dev": "react-router dev",
     "format": "prettier --write .",
-    "pretypecheck": "wrangler types ./types/worker-configuration.d.ts",
-    "typecheck": "tsc",
-    "build": "wrangler build",
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "lint": "eslint .",
+    "postinstall": "npm run pretypecheck",
+    "preview": "npm run build && vite preview",
+    "pretypecheck": "wrangler types ./types/worker-configuration.d.ts && react-router typegen",
+    "typecheck": "tsc -b",
     "inspect": "mcp-inspector"
   },
   "dependencies": {
@@ -17,18 +25,32 @@
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
     "@mcp-ui/server": "^5.2.0",
-    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@modelcontextprotocol/sdk": "^1.17.3",
     "agents": "https://pkg.pr.new/cloudflare/agents@408",
+    "isbot": "^5.1.29",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router": "^7.8.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.11.2",
     "@epic-web/config": "^1.21.3",
+    "@react-router/dev": "^7.8.0",
     "@modelcontextprotocol/inspector": "^0.16.3",
+    "@tailwindcss/vite": "^4.1.12",
     "@types/node": "^24.2.1",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "eslint": "^9.33.0",
     "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5.9.2",
-    "wrangler": "^4.29.1"
+    "vite": "^7.1.1",
+    "vite-plugin-devtools-json": "^0.4.1",
+    "vite-tsconfig-paths": "^5.1.4",
+    "wrangler": "^4.30.0"
   },
   "prettier": "@epic-web/config/prettier",
   "license": "GPL-3.0-only"

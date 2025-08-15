@@ -176,3 +176,8 @@ dist
 
 .dev.vars
 .wrangler/
+
+.react-router
+
+*.tsbuildinfo
+build

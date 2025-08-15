@@ -1,0 +1,179 @@
+@import 'tailwindcss' source('.');
+
+@theme {
+	--font-sans:
+		'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+html,
+body {
+	@media (prefers-color-scheme: dark) {
+		color-scheme: dark;
+	}
+}
+
+:root {
+	--radius: 0.5rem;
+
+	--background: oklch(98% 0.02 60);
+	--foreground: oklch(25% 0.05 60);
+
+	--card: oklch(99% 0.015 60);
+	--card-foreground: oklch(25% 0.05 60);
+
+	--popover: oklch(99% 0.015 60);
+	--popover-foreground: oklch(25% 0.05 60);
+
+	--primary: oklch(55% 0.18 60);
+	--primary-foreground: oklch(98% 0.02 60);
+
+	--secondary: oklch(85% 0.08 60);
+	--secondary-foreground: oklch(25% 0.05 60);
+
+	--muted: oklch(92% 0.04 60);
+	--muted-foreground: oklch(45% 0.06 60);
+
+	--accent: oklch(88% 0.06 60);
+	--accent-foreground: oklch(25% 0.05 60);
+
+	--border: oklch(88% 0.05 60);
+	--input: oklch(88% 0.05 60);
+	--input-invalid: oklch(65% 0.25 25);
+
+	--destructive: oklch(60% 0.22 25);
+	--destructive-foreground: oklch(98% 0.02 60);
+	/* prefixed with foreground because it should look good on the background */
+	--foreground-destructive: oklch(55% 0.2 20);
+
+	--ring: oklch(55% 0.18 60);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--background: oklch(15% 0.04 60);
+		--foreground: oklch(95% 0.02 60);
+
+		--card: oklch(18% 0.04 60);
+		--card-foreground: oklch(95% 0.02 60);
+
+		--popover: oklch(18% 0.04 60);
+		--popover-foreground: oklch(95% 0.02 60);
+
+		--primary: oklch(65% 0.2 60);
+		--primary-foreground: oklch(15% 0.04 60);
+
+		--secondary: oklch(30% 0.08 60);
+		--secondary-foreground: oklch(95% 0.02 60);
+
+		--muted: oklch(25% 0.06 60);
+		--muted-foreground: oklch(70% 0.04 60);
+
+		--accent: oklch(22% 0.05 60);
+		--accent-foreground: oklch(95% 0.02 60);
+
+		--border: oklch(28% 0.06 60);
+		--input: oklch(28% 0.06 60);
+		--input-invalid: oklch(45% 0.18 25);
+
+		--destructive: oklch(50% 0.18 25);
+		--destructive-foreground: oklch(95% 0.02 60);
+		/* prefixed with foreground because it should look good on the background */
+		--foreground-destructive: oklch(65% 0.22 20);
+
+		--ring: oklch(65% 0.2 60);
+	}
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-input-invalid: var(--input-invalid);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-foreground-destructive: var(--foreground-destructive);
+}
+
+@theme {
+	--text-mega: 5rem;
+	--text-mega--line-height: 5.25rem;
+	--text-mega--font-weight: 700;
+	--text-h1: 3.5rem;
+	--text-h1--line-height: 3.875rem;
+	--text-h1--font-weight: 700;
+	--text-h2: 2.5rem;
+	--text-h2--line-height: 3rem;
+	--text-h2--font-weight: 700;
+	--text-h3: 2rem;
+	--text-h3--line-height: 2.25rem;
+	--text-h3--font-weight: 700;
+	--text-h4: 1.75rem;
+	--text-h4--line-height: 2.25rem;
+	--text-h4--font-weight: 700;
+	--text-h5: 1.5rem;
+	--text-h5--line-height: 2rem;
+	--text-h5--font-weight: 700;
+	--text-h6: 1rem;
+	--text-h6--line-height: 1.25rem;
+	--text-h6--font-weight: 700;
+	--text-body-2xl: 2rem;
+	--text-body-2xl--line-height: 2.25rem;
+	--text-body-xl: 1.75rem;
+	--text-body-xl--line-height: 2.25rem;
+	--text-body-lg: 1.5rem;
+	--text-body-lg--line-height: 2rem;
+	--text-body-md: 1.25rem;
+	--text-body-md--line-height: 1.75rem;
+	--text-body-sm: 1rem;
+	--text-body-sm--line-height: 1.25rem;
+	--text-body-xs: 0.875rem;
+	--text-body-xs--line-height: 1.125rem;
+	--text-body-2xs: 0.75rem;
+	--text-body-2xs--line-height: 1rem;
+	--text-caption: 1.125rem;
+	--text-caption--line-height: 1.5rem;
+	--text-caption--font-weight: 600;
+	--text-button: 0.75rem;
+	--text-button--line-height: 1rem;
+	--text-button--font-weight: 700;
+}
+
+@utility container {
+	margin-inline: auto;
+	padding-inline: 2rem;
+
+	@media (width >=1400px) {
+		& {
+			max-width: 1400px;
+		}
+	}
+}
+
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: hsl(var(--border));
+	}
+}

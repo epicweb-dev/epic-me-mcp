@@ -122,7 +122,6 @@ const migrations = [
 
 // Run migrations
 export async function migrate(db: D1Database) {
-	console.log('Starting migration process...')
 	try {
 		// Create schema_versions table if it doesn't exist (this is our first run)
 		await db.exec(sql`
@@ -132,7 +131,6 @@ export async function migrate(db: D1Database) {
 				applied_at INTEGER DEFAULT (CURRENT_TIMESTAMP) NOT NULL
 			);
 		`)
-		console.log('Schema versions table ready')
 
 		// Get the current version
 		const result = await db
@@ -140,7 +138,7 @@ export async function migrate(db: D1Database) {
 			.first<{ version: number | null }>()
 
 		const currentVersion = result?.version ?? 0
-		console.log('Current schema version:', currentVersion)
+		let migrationCount = 0
 
 		// Run any migrations that haven't been applied yet
 		for (const migration of migrations) {
@@ -154,9 +152,14 @@ export async function migrate(db: D1Database) {
 					.bind(migration.version, migration.name)
 					.run()
 				console.log(`Completed migration ${migration.version}`)
+				migrationCount++
 			}
 		}
-		console.log('Migration process completed successfully')
+		if (migrationCount > 0) {
+			console.log(
+				`Migration process completed successfully. ${migrationCount} migrations applied.`,
+			)
+		}
 	} catch (error) {
 		console.error('Error during migration process:', error)
 		throw error
