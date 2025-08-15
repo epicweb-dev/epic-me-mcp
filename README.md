@@ -6,6 +6,10 @@ Context Protocol (MCP).
 Everything from user registration and authentication to interacting with user
 data is handled via MCP tools.
 
+<a href="https://glama.ai/mcp/servers/@epicweb-dev/epic-me-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@epicweb-dev/epic-me-mcp/badge" alt="EpicMe MCP server" />
+</a>
+
 The goal is to demonstrate a possible future of applications where users
 interact with our apps via natural language with LLMs and the MCP protocol. This
 will also be the basis upon which I will teach how to build MCP tools on
