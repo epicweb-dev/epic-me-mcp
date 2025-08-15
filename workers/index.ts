@@ -3,8 +3,6 @@ import { createRequestHandler } from 'react-router'
 import { DB } from './db'
 import { EpicMeMCP } from './mcp/index.ts'
 
-export { EpicMeMCP }
-
 const requestHandler = createRequestHandler(
 	() => import('virtual:react-router/server-build'),
 	import.meta.env.MODE,
@@ -64,3 +62,5 @@ export default {
 		return oauthProvider.fetch(request, env, ctx)
 	},
 }
+
+export { EpicMeMCP }
