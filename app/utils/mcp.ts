@@ -90,11 +90,11 @@ export function callTool(
 
 		function handleMessage(event: MessageEvent) {
 			if (event.data.type === 'ui-message-response') {
+				console.log(event)
 				const {
 					messageId: responseMessageId,
-					response,
-					error,
-				} = event.data.payload
+					payload: { response, error },
+				} = event.data
 				if (responseMessageId === messageId) {
 					window.removeEventListener('message', handleMessage)
 
