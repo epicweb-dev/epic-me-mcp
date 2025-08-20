@@ -1,6 +1,7 @@
 // ensure the module is in the program so the merge hits
 import 'cloudflare:workers'
 import { type DB } from '#workers/db/index.ts'
+import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider'
 
 declare global {
 	namespace Cloudflare {

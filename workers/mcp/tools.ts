@@ -31,8 +31,9 @@ export async function initializeTools(agent: EpicMeMCP) {
 				title: 'Get Client Capabilities',
 			},
 			async () => {
+				const clientCapabilities = agent.server.server.getClientCapabilities()
 				return {
-					content: [createText(agent.server.server.getClientCapabilities())],
+					content: [createText(clientCapabilities ?? 'No client capabilities')],
 				}
 			},
 		),
