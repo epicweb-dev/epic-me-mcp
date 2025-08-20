@@ -2,6 +2,7 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { createRequestHandler } from 'react-router'
 import { DB } from './db'
 import { EpicMeMCP } from './mcp/index.ts'
+import { withCors } from './utils/misc.ts'
 
 const requestHandler = createRequestHandler(
 	() => import('virtual:react-router/server-build'),
@@ -43,22 +44,9 @@ const oauthProvider = new OAuthProvider({
 })
 
 export default {
-	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
-		if (request.method === 'OPTIONS') {
-			return new Response(null, {
-				headers: {
-					'Access-Control-Allow-Headers':
-						'Content-Type, mcp-session-id, mcp-protocol-version',
-					'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-					'Access-Control-Allow-Origin': origin,
-					'Access-Control-Expose-Headers': 'mcp-session-id',
-					'Access-Control-Max-Age': '86400',
-				},
-			})
-		}
-
+	fetch: withCors(async (request: Request, env: Env, ctx: ExecutionContext) => {
 		return oauthProvider.fetch(request, env, ctx)
-	},
+	}),
 }
 
 export { EpicMeMCP }
