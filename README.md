@@ -89,7 +89,7 @@ The authentication is unique because it works with users who don't exist yet:
 
 - **`suggest_tags`** - Get AI-powered tag suggestions for a specific journal
   entry
-- **`summarize-journal-entries`** - Get a summary of your journal entries, with
+- **`summarize_journal_entries`** - Get a summary of your journal entries, with
   optional filtering by tags or date range
 
 ### Available Resources

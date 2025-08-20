@@ -55,10 +55,42 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 			instructions: `
 EpicMe is a journaling app that allows users to write about and review their experiences, thoughts, and reflections.
 
-These tools are the user's window into their journal. With these tools and your help, they can create, read, and manage their journal entries and associated tags.
+To use any tools, follow these steps:
 
-You can also help users add tags to their entries and get all tags for an entry.
-`.trim(),
+1. Check if the user is authenticated by calling \`whoami\`.
+2. If the user is not authenticated:
+   - Ask the user for their email address.
+   - Call \`authenticate\` with the provided email to log in.
+   - Ask the user for the validation token that was sent to their email.
+   - Call \`validate_token\` with the token to validate their account.
+
+Basic CRUD operations are available for entries, tags, and the tag-entry relationship.
+
+## Journal Management Workflow
+- **Create entries**: Use \`create_entry\` to write about experiences, thoughts, or daily reflections
+- **Organize with tags**: Use \`list_tags\` to see available tags, then \`create_tag\` to create new ones (e.g., "work", "personal", "ideas"), then \`add_tag_to_entry\` to organize entries
+- **Browse and read**: Use \`list_entries\` to see all entries, \`get_entry\` to read specific entries, or \`view_journal\` for a visual interface if you support MCP-UI.
+- **Maintain**: Use \`update_entry\` to edit or expand entries, \`delete_entry\` to remove unwanted entries
+
+## Best Practices
+- Always use \`list_tags\` before suggesting tag creation to avoid duplicates
+- Use \`list_entries\` to help users find specific entries by ID
+- Suggest \`view_journal\` when users want to browse their entries visually if you support MCP-UI
+
+## Common User Requests
+- "Write in my journal" → \`create_entry\`
+- "Show me my entries" → \`list_entries\` or \`view_journal\`
+- "Organize my entries" → \`list_tags\` then \`create_tag\` and \`add_tag_to_entry\`
+- "Find entries about work" → \`list_tags\` to find work tag, then filter entries
+- "Suggest tags for this entry" → \`get_tag_suggestions_instructions\`
+- "Summarize my journal" → \`get_journal_insights_instructions\`
+
+## AI-Powered Features
+- **Tag Suggestions**: Use \`get_tag_suggestions_instructions\` when users want help organizing entries with appropriate tags
+- **Journal Insights**: Use \`get_journal_insights_instructions\` when users want to see patterns or get overviews of their journaling
+
+Note: MCP prompts are also available for clients that support them: \`suggest_tags\` and \`summarize_journal_entries\`
+			`.trim(),
 		},
 	)
 	constructor(ctx: DurableObjectState, env: Env) {
@@ -71,8 +103,6 @@ You can also help users add tags to their entries and get all tags for an entry.
 	}
 
 	async init() {
-		this.setState({ ...this.state })
-
 		this.server.server.setRequestHandler(
 			SetLevelRequestSchema,
 			async (request) => {
@@ -103,6 +133,17 @@ You can also help users add tags to their entries and get all tags for an entry.
 			`No user found with the given grantId. Please claim the grant by invoking the "authenticate" tool.`,
 		)
 		return user
+	}
+
+	async requireGrantId() {
+		const { grantId } = this.props
+		invariant(grantId, 'You must be logged in to perform this action')
+		const grant = await this.db.getGrant(grantId)
+		invariant(
+			grant,
+			'The given grant is invalid (no matching grant in the database)',
+		)
+		return grant
 	}
 
 	async updateAvailableItems() {

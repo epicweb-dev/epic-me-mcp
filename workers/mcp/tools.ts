@@ -17,10 +17,14 @@ import {
 } from '../db/schema.ts'
 import { sendEmail } from '../utils/email.ts'
 import { type EpicMeMCP } from './index.ts'
+import {
+	createSuggestTagsPrompt,
+	createSummarizeJournalPrompt,
+} from './prompts.ts'
 import { suggestTagsSampling } from './sampling.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
-	agent.unauthenticatedTools = [
+	agent.unauthenticatedTools.push(
 		agent.server.registerTool(
 			'authenticate',
 			{
@@ -33,14 +37,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 					email: z
 						.string()
 						.email()
-						.describe(
-							`The user's email address for their account.\n\nPlease ask them explicitely for their email address and don't just guess.`,
-						),
+						.describe("The user's email address for their account"),
 				},
 			},
 			async ({ email }) => {
 				const baseUrl = agent.props.baseUrl
-				const grant = await requireGrantId()
+				const grant = await agent.requireGrantId()
 				const { otp } = await generateTOTP({
 					period: 30,
 					digits: 6,
@@ -76,21 +78,18 @@ export async function initializeTools(agent: EpicMeMCP) {
 			'validate_token',
 			{
 				title: 'Validate Token',
-				description: 'Validate a token which was emailed',
+				description:
+					"Validate the user session with the 6-digit token sent to the user's email",
 				annotations: {
 					destructiveHint: false,
 					openWorldHint: false,
 				},
 				inputSchema: {
-					validationToken: z
-						.string()
-						.describe(
-							'The validation token the user received in their email inbox from the authenticate tool',
-						),
+					validationToken: z.string().describe('The 6-digit token'),
 				},
 			},
 			async ({ validationToken }) => {
-				const grant = await requireGrantId()
+				const grant = await agent.requireGrantId()
 				const user = await agent.db.validateTokenToGrant(
 					grant.id,
 					validationToken,
@@ -104,9 +103,9 @@ export async function initializeTools(agent: EpicMeMCP) {
 				}
 			},
 		),
-	]
+	)
 
-	agent.authenticatedTools = [
+	agent.authenticatedTools.push(
 		agent.server.registerTool(
 			'view_journal',
 			{
@@ -119,7 +118,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				},
 			},
 			async () => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const baseUrl = agent.props.baseUrl
 				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
 				return {
@@ -151,7 +150,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { user: userSchema },
 			},
 			async () => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				return {
 					structuredContent: { user },
 					content: [createText(JSON.stringify({ user }, null, 2))],
@@ -173,7 +172,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				},
 			},
 			async () => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				await agent.db.unclaimGrant(user.id, agent.props.grantId)
 				const structuredContent = {
 					success: true,
@@ -198,7 +197,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { entry: entrySchema },
 			},
 			async (entry) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const createdEntry = await agent.db.createEntry(user.id, entry)
 				if (entry.tags) {
 					for (const tagId of entry.tags) {
@@ -215,7 +214,10 @@ export async function initializeTools(agent: EpicMeMCP) {
 					structuredContent: { entry: createdEntry },
 					content: [
 						createText(
-							`Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
+							`✅ Entry "${createdEntry.title}" created successfully with ID "${createdEntry.id}"`,
+						),
+						createText(
+							'💡 You can now add tags to organize this entry, or create another entry',
 						),
 						createEntryResourceLink(createdEntry),
 					],
@@ -237,9 +239,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { entry: entrySchema },
 			},
 			async ({ id }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const entry = await agent.db.getEntry(user.id, id)
-				invariant(entry, `Entry with ID "${id}" not found`)
+				invariant(
+					entry,
+					`Entry with ID "${id}" not found. Use list_entries to see all available entries.`,
+				)
 				const structuredContent = { entry }
 				return {
 					structuredContent,
@@ -263,14 +268,25 @@ export async function initializeTools(agent: EpicMeMCP) {
 					tagIds: z
 						.array(z.number())
 						.optional()
-						.describe('Optional array of tag IDs to filter entries by'),
+						.describe('Optional: filter entries by specific tag IDs'),
 				},
 			},
 			async ({ tagIds }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const entries = await agent.db.getEntries(user.id, tagIds)
 				const entryLinks = entries.map(createEntryResourceLink)
 				const structuredContent = { entries }
+
+				if (entries.length === 0) {
+					return {
+						structuredContent,
+						content: [
+							createText('📝 Your journal is empty!'),
+							createText('💡 Try creating your first entry with create_entry'),
+						],
+					}
+				}
+
 				return {
 					structuredContent,
 					content: [
@@ -287,7 +303,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 			{
 				title: 'Update Entry',
 				description:
-					'Update a journal entry. Fields that are not provided (or set to undefined) will not be updated. Fields that are set to null or any other value will be updated.',
+					'Update a journal entry. Only provided fields will be updated.',
 				annotations: {
 					destructiveHint: false,
 					idempotentHint: true,
@@ -297,9 +313,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { entry: entrySchema },
 			},
 			async ({ id, ...updates }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const existingEntry = await agent.db.getEntry(user.id, id)
-				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				invariant(
+					existingEntry,
+					`Entry with ID "${id}" not found. Use list_entries to see all available entries.`,
+				)
 				const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
 				return {
 					structuredContent: { entry: updatedEntry },
@@ -331,9 +350,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 				},
 			},
 			async ({ id }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const existingEntry = await agent.db.getEntry(user.id, id)
-				invariant(existingEntry, `Entry with ID "${id}" not found`)
+				invariant(
+					existingEntry,
+					`Entry with ID "${id}" not found. Use list_entries to see all available entries.`,
+				)
 				const confirmed = await elicitConfirmation(
 					agent,
 					'Are you sure you want to delete this entry?',
@@ -375,13 +397,16 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { tag: tagSchema },
 			},
 			async (tag) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const createdTag = await agent.db.createTag(user.id, tag)
 				return {
 					structuredContent: { tag: createdTag },
 					content: [
 						createText(
-							`Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
+							`🏷️ Tag "${createdTag.name}" created successfully with ID "${createdTag.id}"`,
+						),
+						createText(
+							'💡 You can now find entries to add this tag to with list_entries, or add this tag to entries with add_tag_to_entry',
 						),
 						createTagResourceLink(createdTag),
 					],
@@ -403,9 +428,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { tag: tagSchema },
 			},
 			async ({ id }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const tag = await agent.db.getTag(user.id, id)
-				invariant(tag, `Tag ID "${id}" not found`)
+				invariant(
+					tag,
+					`Tag ID "${id}" not found. Use list_tags to see all available tags.`,
+				)
 				const structuredContent = { tag }
 				return {
 					structuredContent,
@@ -424,10 +452,23 @@ export async function initializeTools(agent: EpicMeMCP) {
 				},
 			},
 			async () => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const tags = await agent.db.getTags(user.id)
 				const tagLinks = tags.map(createTagResourceLink)
 				const structuredContent = { tags }
+
+				if (tags.length === 0) {
+					return {
+						structuredContent,
+						content: [
+							createText('🏷️ No tags yet!'),
+							createText(
+								'💡 Create your first tag with create_tag to start organizing your entries',
+							),
+						],
+					}
+				}
+
 				return {
 					structuredContent,
 					content: [
@@ -452,7 +493,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { tag: tagSchema },
 			},
 			async ({ id, ...updates }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const updatedTag = await agent.db.updateTag(user.id, id, updates)
 				const structuredContent = { tag: updatedTag }
 				return {
@@ -480,9 +521,12 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { success: z.boolean(), tag: tagSchema },
 			},
 			async ({ id }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const existingTag = await agent.db.getTag(user.id, id)
-				invariant(existingTag, `Tag ID "${id}" not found`)
+				invariant(
+					existingTag,
+					`Tag ID "${id}" not found. Use list_tags to see all available tags.`,
+				)
 				const confirmed = await elicitConfirmation(
 					agent,
 					`Are you sure you want to delete tag "${existingTag.name}" (ID: ${id})?`,
@@ -520,7 +564,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 			'add_tag_to_entry',
 			{
 				title: 'Add Tag to Entry',
-				description: 'Add a tag to an entry',
+				description: 'Add a tag to an existing journal entry',
 				annotations: {
 					destructiveHint: false,
 					idempotentHint: true,
@@ -530,11 +574,17 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: { success: z.boolean(), entryTag: entryTagSchema },
 			},
 			async ({ entryId, tagId }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				const tag = await agent.db.getTag(user.id, tagId)
 				const entry = await agent.db.getEntry(user.id, entryId)
-				invariant(tag, `Tag ${tagId} not found`)
-				invariant(entry, `Entry with ID "${entryId}" not found`)
+				invariant(
+					tag,
+					`Tag ID ${tagId} not found. Use list_tags to see all available tags.`,
+				)
+				invariant(
+					entry,
+					`Entry with ID "${entryId}" not found. Use list_entries to see all available entries.`,
+				)
 				const entryTag = await agent.db.addTagToEntry(user.id, {
 					entryId,
 					tagId,
@@ -544,7 +594,10 @@ export async function initializeTools(agent: EpicMeMCP) {
 					structuredContent,
 					content: [
 						createText(
-							`Tag "${tag.name}" (ID: ${entryTag.tagId}) added to entry "${entry.title}" (ID: ${entryTag.entryId}) successfully`,
+							`✅ Tag "${tag.name}" added to entry "${entry.title}" successfully`,
+						),
+						createText(
+							'💡 Your entry is now organized! You can add more tags or view all entries',
 						),
 						createTagResourceLink(tag),
 						createEntryResourceLink(entry),
@@ -553,29 +606,76 @@ export async function initializeTools(agent: EpicMeMCP) {
 				}
 			},
 		),
-	]
+	)
+}
 
-	async function requireGrantId() {
-		const { grantId } = agent.props
-		invariant(grantId, 'You must be logged in to perform this action')
-		const grant = await agent.db.getGrant(grantId)
-		invariant(
-			grant,
-			'The given grant is invalid (no matching grant in the database)',
-		)
-		return grant
-	}
-
-	async function requireUser() {
-		const { grantId } = agent.props
-		invariant(grantId, 'You must be logged in to perform this action')
-		const user = await agent.db.getUserByGrantId(grantId)
-		invariant(
-			user,
-			`No user found with the given grantId. Please claim the grant by invoking the "authenticate" tool.`,
-		)
-		return user
-	}
+export async function initializePromptTools(agent: EpicMeMCP) {
+	agent.authenticatedTools.push(
+		agent.server.registerTool(
+			'get_tag_suggestions_instructions',
+			{
+				title: 'Get Tag Suggestions Instructions',
+				description:
+					'Get instructions on how to suggest tags for a journal entry',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					entryId: z
+						.number()
+						.describe('The ID of the journal entry to get tag suggestions for'),
+				},
+			},
+			async ({ entryId }) => {
+				const user = await agent.requireUser()
+				const entry = await agent.db.getEntry(user.id, entryId)
+				invariant(
+					entry,
+					`Entry with ID "${entryId}" not found. Use list_entries to see all available entries.`,
+				)
+				const tags = await agent.db.getTags(user.id)
+				const result = createSuggestTagsPrompt(entryId.toString(), entry, tags)
+				return {
+					content: result.messages.map((m) => m.content),
+				}
+			},
+		),
+		agent.server.registerTool(
+			'get_journal_insights_instructions',
+			{
+				title: 'Get Journal Insights Instructions',
+				description:
+					'Git instructions for how to summarize journal entries, optionally filtered by tags or date range',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				},
+				inputSchema: {
+					tagIds: z
+						.array(z.number())
+						.optional()
+						.describe('Optional: filter entries by specific tag IDs'),
+					from: z
+						.string()
+						.optional()
+						.describe('Optional: start date in YYYY-MM-DD format'),
+					to: z
+						.string()
+						.optional()
+						.describe('Optional: end date in YYYY-MM-DD format'),
+				},
+			},
+			async ({ tagIds, from, to }) => {
+				const user = await agent.requireUser()
+				const entries = await agent.db.getEntries(user.id, tagIds, from, to)
+				const prompt = createSummarizeJournalPrompt(entries)
+				return {
+					content: prompt.messages.map((m) => m.content),
+				}
+			},
+		),
+	)
 }
 
 function createText(text: unknown): CallToolResult['content'][number] {

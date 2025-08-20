@@ -27,11 +27,9 @@ const oauthProvider = new OAuthProvider({
 			const url = new URL(request.url)
 			if (url.pathname === '/mcp') {
 				ctx.props.baseUrl = url.origin
-				return EpicMeMCP.serve('/mcp', { binding: 'EPIC_ME_MCP_OBJECT' }).fetch(
-					request,
-					env,
-					ctx,
-				)
+				return EpicMeMCP.serve('/mcp', {
+					binding: 'EPIC_ME_MCP_OBJECT',
+				}).fetch(request, env, ctx)
 			}
 
 			return new Response('Not found', { status: 404 })
