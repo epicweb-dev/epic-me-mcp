@@ -26,6 +26,17 @@ import { suggestTagsSampling } from './sampling.ts'
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools.push(
 		agent.server.registerTool(
+			'get_client_capabilities',
+			{
+				title: 'Get Client Capabilities',
+			},
+			async () => {
+				return {
+					content: [createText(agent.server.server.getClientCapabilities())],
+				}
+			},
+		),
+		agent.server.registerTool(
 			'authenticate',
 			{
 				title: 'Authenticate',
