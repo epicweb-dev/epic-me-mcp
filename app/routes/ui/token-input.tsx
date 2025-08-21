@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from 'react'
 import {
-	callTool,
+	sendPrompt,
 	useFormSubmissionCapability,
 	useMcpUiInit,
 } from '#app/utils/mcp.ts'
@@ -90,19 +90,18 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 		dispatch({ type: 'START_VALIDATION' })
 
 		try {
-			const result = await callTool(
-				'validate_token',
-				{ validationToken: token },
+			await sendPrompt(
+				`Please validate this auth token with the epicme validate_token tool: ${token}`,
 				abortControllerRef.current?.signal,
 			)
 
-			console.log('Token validation result:', result)
+			console.log('Token validation prompt sent to parent')
 			dispatch({ type: 'VALIDATION_SUCCESS' })
 		} catch (error) {
-			console.error('Token validation failed:', error)
+			console.error('Failed to send prompt:', error)
 			dispatch({
 				type: 'VALIDATION_ERROR',
-				message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				message: `Failed to send validation request: ${error instanceof Error ? error.message : 'Unknown error'}`,
 			})
 		}
 	}
@@ -136,11 +135,11 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 							✅
 						</div>
 						<h1 className="text-primary mb-4 text-2xl font-bold">
-							Token Validated Successfully!
+							Token Submitted Successfully!
 						</h1>
 						<p className="text-muted-foreground leading-relaxed">
-							Your validation token has been accepted. You can now make
-							authenticated requests.
+							Please wait for the agent to validate the token. If you have
+							trouble, ask your agent to try authenticating again.
 						</p>
 					</div>
 				</div>
