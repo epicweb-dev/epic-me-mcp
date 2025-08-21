@@ -5,7 +5,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "epic-me-mcp",
-	"main": "workers/index.ts",
+	"main": "worker/index.ts",
 	"compatibility_date": "2025-04-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"migrations": [

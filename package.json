@@ -6,7 +6,7 @@
     "#app/*": "./app/*",
     "#tests/*": "./tests/*",
     "#types/*": "./types/*",
-    "#workers/*": "./workers/*"
+    "#worker/*": "./workers/*"
   },
   "scripts": {
     "build": "react-router build",
