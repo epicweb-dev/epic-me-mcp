@@ -14,6 +14,7 @@ import {
 	updateTagInputSchema,
 	tagIdSchema,
 	entryTagIdSchema,
+	entryWithTagsSchema,
 } from '../db/schema.ts'
 import { sendEmail } from '../utils/email.ts'
 import { type EpicMeMCP } from './index.ts'
@@ -206,7 +207,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 				inputSchema: createEntryInputSchema,
-				outputSchema: { entry: entrySchema },
+				outputSchema: { entry: entryWithTagsSchema },
 			},
 			async (entry) => {
 				const user = await agent.requireUser()
@@ -248,7 +249,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				inputSchema: {
 					id: z.number().describe('The ID of the entry'),
 				},
-				outputSchema: { entry: entrySchema },
+				outputSchema: { entry: entryWithTagsSchema },
 			},
 			async ({ id }) => {
 				const user = await agent.requireUser()
@@ -322,7 +323,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 				inputSchema: updateEntryInputSchema,
-				outputSchema: { entry: entrySchema },
+				outputSchema: { entry: entryWithTagsSchema },
 			},
 			async ({ id, ...updates }) => {
 				const user = await agent.requireUser()
@@ -358,7 +359,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				outputSchema: {
 					success: z.boolean(),
 					message: z.string(),
-					entry: entrySchema.optional(),
+					entry: entryWithTagsSchema.optional(),
 				},
 			},
 			async ({ id }) => {
