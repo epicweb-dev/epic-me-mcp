@@ -1,3 +1,11 @@
+// TODO: There's not an established pattern for authentication with MCP UI. One
+// way we could do this is with a token as a query param that is short-lived so
+// it's not a problem to include in logs. And then that can be swapped out for a
+// proper long-lived token. Should be relatively straightforward. But when you
+// add the long-lived stuff, that gets complicated quickly. So there's got to be
+// another way to do this and we're punting on that for now until something
+// shows up in the spec that makes this easier.
+
 import { invariantResponse } from '@epic-web/invariant'
 import { getTokenInfo } from '#app/utils/auth.ts'
 import { useMcpUiInit } from '#app/utils/mcp.ts'

@@ -139,8 +139,8 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 							Token Validated Successfully!
 						</h1>
 						<p className="text-muted-foreground leading-relaxed">
-							Your validation token has been accepted. You can now close this
-							window.
+							Your validation token has been accepted. You can now make
+							authenticated requests.
 						</p>
 					</div>
 				</div>
