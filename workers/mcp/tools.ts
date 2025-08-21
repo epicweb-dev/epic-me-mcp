@@ -6,7 +6,6 @@ import { z } from 'zod'
 import {
 	createEntryInputSchema,
 	createTagInputSchema,
-	entrySchema,
 	entryTagSchema,
 	updateEntryInputSchema,
 	tagSchema,
