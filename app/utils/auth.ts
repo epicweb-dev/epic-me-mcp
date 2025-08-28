@@ -12,7 +12,6 @@ export async function getTokenInfo(
 	env: Env,
 ): Promise<Token | undefined> {
 	const token = request.headers.get('authorization')?.slice('Bearer '.length)
-	console.log({ token })
 	if (!token) return undefined
 	return resolveTokenInfo(token, env)
 }
@@ -22,16 +21,12 @@ async function resolveTokenInfo(
 	env: Env,
 ): Promise<Token | undefined> {
 	const parts = token.split(':')
-	console.log({ parts })
 	if (parts.length !== 3) throw new Error('Invalid token format')
 
 	const [userId, grantId] = parts
-	console.log({ userId, grantId })
 	const tokenId = await generateTokenId(token)
 	const tokenKey = `token:${userId}:${grantId}:${tokenId}`
-	console.log({ tokenKey })
 	const tokenData = await env.OAUTH_KV.get(tokenKey, { type: 'json' })
-	console.log({ tokenData })
 	if (!tokenData) throw new Error('Token not found')
 
 	return tokenData as Token

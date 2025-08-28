@@ -16,6 +16,7 @@ import {
 	entryWithTagsSchema,
 } from '../db/schema.ts'
 import { sendEmail } from '../utils/email.ts'
+import { getDomainUrl } from '../utils/misc.ts'
 import { type EpicMeMCP } from './index.ts'
 import {
 	createSuggestTagsPrompt,
@@ -25,6 +26,18 @@ import { suggestTagsSampling } from './sampling.ts'
 
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools.push(
+		agent.server.registerTool(
+			'get_extra_info',
+			{
+				title: 'Get Extra Info',
+				description: 'Get extra info',
+			},
+			async (extra) => {
+				return {
+					content: [createText({ extra })],
+				}
+			},
+		),
 		agent.server.registerTool(
 			'get_client_capabilities',
 			{
@@ -52,8 +65,9 @@ export async function initializeTools(agent: EpicMeMCP) {
 						.describe("The user's email address for their account"),
 				},
 			},
-			async ({ email }) => {
-				const baseUrl = agent.props.baseUrl
+			async ({ email }, { requestInfo }) => {
+				const baseUrl = getDomainUrl(requestInfo?.headers)
+				console.log({ baseUrl })
 				const grant = await agent.requireGrantId()
 				const { otp } = await generateTOTP({
 					period: 30,
@@ -129,9 +143,9 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 			},
-			async () => {
+			async ({}, { requestInfo }) => {
 				const user = await agent.requireUser()
-				const baseUrl = agent.props.baseUrl
+				const baseUrl = getDomainUrl(requestInfo?.headers)
 				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
 				return {
 					content: [

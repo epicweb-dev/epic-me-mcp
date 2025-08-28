@@ -18,7 +18,7 @@ import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
 
 type State = { loggingLevel: LoggingLevel }
-type Props = { grantId: string; grantUserId: string; baseUrl: string }
+type Props = { grantId: string; grantUserId: string }
 
 export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	db!: DB

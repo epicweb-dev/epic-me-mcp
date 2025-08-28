@@ -2,7 +2,7 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { createRequestHandler } from 'react-router'
 import { DB } from './db'
 import { EpicMeMCP } from './mcp/index.ts'
-import { withCors } from './utils/misc.ts'
+import { mergeHeaders, withCors } from './utils/misc.ts'
 
 const requestHandler = createRequestHandler(
 	() => import('virtual:react-router/server-build'),
@@ -27,10 +27,17 @@ const oauthProvider = new OAuthProvider({
 		fetch(request: Request, env: Env, ctx: ExecutionContext) {
 			const url = new URL(request.url)
 			if (url.pathname === '/mcp') {
-				ctx.props.baseUrl = url.origin
+				console.log({ urlHost: url.host, urlProto: url.protocol })
+				const newRequest = new Request(request, {
+					headers: mergeHeaders(request.headers, {
+						'x-original-host': url.host,
+						'x-original-proto': url.protocol,
+					}),
+				})
+
 				return EpicMeMCP.serve('/mcp', {
 					binding: 'EPIC_ME_MCP_OBJECT',
-				}).fetch(request, env, ctx)
+				}).fetch(newRequest, env, ctx)
 			}
 
 			return new Response('Not found', { status: 404 })
@@ -44,8 +51,20 @@ const oauthProvider = new OAuthProvider({
 })
 
 export default {
-	fetch: withCors(async (request: Request, env: Env, ctx: ExecutionContext) => {
-		return oauthProvider.fetch(request, env, ctx)
+	fetch: withCors({
+		getCorsHeaders: (request) => {
+			if (request.url.includes('/.well-known')) {
+				return {
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+					'Access-Control-Allow-Headers': 'mcp-protocol-version',
+					'Cross-Origin-Resource-Policy': 'cross-origin',
+				}
+			}
+		},
+		handler: async (request: Request, env: Env, ctx: ExecutionContext) => {
+			return oauthProvider.fetch(request, env, ctx)
+		},
 	}),
 }
 

@@ -1,39 +1,35 @@
-export function withCors(
-	handler: (
+import { invariant } from '@epic-web/invariant'
+import { type RequestInfo } from '@modelcontextprotocol/sdk/types.js'
+
+export function withCors({
+	getCorsHeaders,
+	handler,
+}: {
+	getCorsHeaders(
 		request: Request,
-		env: Env,
-		ctx: ExecutionContext,
-	) => Promise<Response>,
-) {
-	return async (request: Request, env: Env, ctx: ExecutionContext) => {
+	): Record<string, string> | Headers | null | undefined
+	handler: ExportedHandlerFetchHandler<Env>
+}): ExportedHandlerFetchHandler<Env> {
+	return async (request, env, ctx) => {
+		const corsHeaders = getCorsHeaders(request)
+		if (!corsHeaders) {
+			return handler(request, env, ctx)
+		}
+
 		// Handle CORS preflight requests
 		if (request.method === 'OPTIONS') {
-			return new Response(null, {
-				status: 200,
-				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-					'Access-Control-Allow-Headers':
-						'Content-Type, Authorization, X-Requested-With',
-					'Access-Control-Max-Age': '86400',
-				},
+			const headers = mergeHeaders(corsHeaders, {
+				'Access-Control-Max-Age': '86400',
 			})
+
+			return new Response(null, { status: 204, headers })
 		}
 
 		// Call the original handler
 		const response = await handler(request, env, ctx)
 
-		// Add CORS headers to the response
-		const newHeaders = new Headers(response.headers)
-		newHeaders.set('Access-Control-Allow-Origin', '*')
-		newHeaders.set(
-			'Access-Control-Allow-Methods',
-			'GET, POST, PUT, DELETE, OPTIONS',
-		)
-		newHeaders.set(
-			'Access-Control-Allow-Headers',
-			'Content-Type, Authorization, X-Requested-With',
-		)
+		// Add CORS headers to ALL responses, including early returns
+		const newHeaders = mergeHeaders(response.headers, corsHeaders)
 
 		return new Response(response.body, {
 			status: response.status,
@@ -41,4 +37,30 @@ export function withCors(
 			headers: newHeaders,
 		})
 	}
+}
+
+/**
+ * Merge multiple headers objects into one (uses set so headers are overridden)
+ */
+export function mergeHeaders(
+	...headers: Array<ResponseInit['headers'] | null | undefined>
+) {
+	const merged = new Headers()
+	for (const header of headers) {
+		if (!header) continue
+		for (const [key, value] of new Headers(header).entries()) {
+			merged.set(key, value)
+		}
+	}
+	return merged
+}
+
+export function getDomainUrl(headers?: RequestInfo['headers']) {
+	invariant(headers, 'Headers are required')
+
+	const host = headers['x-original-host']
+	const protocol = headers['x-original-proto']
+	invariant(host, 'Host is required')
+	invariant(protocol, 'Protocol is required')
+	return `${protocol}//${host}`
 }
