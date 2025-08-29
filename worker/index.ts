@@ -27,7 +27,6 @@ const oauthProvider = new OAuthProvider({
 		fetch(request: Request, env: Env, ctx: ExecutionContext) {
 			const url = new URL(request.url)
 			if (url.pathname === '/mcp') {
-				console.log({ urlHost: url.host, urlProto: url.protocol })
 				const newRequest = new Request(request, {
 					headers: mergeHeaders(request.headers, {
 						'x-original-host': url.host,

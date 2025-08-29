@@ -67,7 +67,6 @@ export async function initializeTools(agent: EpicMeMCP) {
 			},
 			async ({ email }, { requestInfo }) => {
 				const baseUrl = getDomainUrl(requestInfo?.headers)
-				console.log({ baseUrl })
 				const grant = await agent.requireGrantId()
 				const { otp } = await generateTOTP({
 					period: 30,
