@@ -53,43 +53,33 @@ export class EpicMeMCP extends McpAgent<Env, State, Props> {
 				logging: {},
 			},
 			instructions: `
-EpicMe is a journaling app that allows users to write about and review their experiences, thoughts, and reflections.
+EpicMe: Personal journaling server with AI-powered organization.
 
-To use any tools, follow these steps:
+## Authentication Required
+Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email, 2) \`validate_token\` with 6-digit code.
 
-1. Check if the user is authenticated by calling \`whoami\`.
-2. If the user is not authenticated:
-   - Ask the user for their email address.
-   - Call \`authenticate\` with the provided email to log in.
-   - Ask the user for the validation token that was sent to their email.
-   - Call \`validate_token\` with the token to validate their account.
-
-Basic CRUD operations are available for entries, tags, and the tag-entry relationship.
-
-## Journal Management Workflow
-- **Create entries**: Use \`create_entry\` to write about experiences, thoughts, or daily reflections
-- **Organize with tags**: Use \`list_tags\` to see available tags, then \`create_tag\` to create new ones (e.g., "work", "personal", "ideas"), then \`add_tag_to_entry\` to organize entries
-- **Browse and read**: Use \`list_entries\` to see all entries, \`get_entry\` to read specific entries, or \`view_journal\` for a visual interface if you support MCP-UI.
-- **Maintain**: Use \`update_entry\` to edit or expand entries, \`delete_entry\` to remove unwanted entries
+## Core Workflow
+- Create: \`create_entry\` → \`list_tags\` → \`create_tag\` (if needed) → \`add_tag_to_entry\`
+- Browse: \`list_entries\` or \`view_journal\` (MCP-UI clients)
+- Organize: \`get_tag_suggestions_instructions\` for AI suggestions
+- Analyze: \`get_journal_insights_instructions\` for patterns/summaries
 
 ## Best Practices
-- Always use \`list_tags\` before suggesting tag creation to avoid duplicates
-- Use \`list_entries\` to help users find specific entries by ID
-- Suggest \`view_journal\` when users want to browse their entries visually if you support MCP-UI
+- Check \`list_tags\` before creating new tags to avoid duplicates
+- Use \`list_entries\` to find specific entry IDs before \`get_entry\`
+- Prefer MCP prompts (\`suggest_tags\`, \`summarize_journal_entries\`) over instruction tools when available
 
-## Common User Requests
+## Common Requests
 - "Write in my journal" → \`create_entry\`
 - "Show me my entries" → \`list_entries\` or \`view_journal\`
 - "Organize my entries" → \`list_tags\` then \`create_tag\` and \`add_tag_to_entry\`
-- "Find entries about work" → \`list_tags\` to find work tag, then filter entries
 - "Suggest tags for this entry" → \`get_tag_suggestions_instructions\`
 - "Summarize my journal" → \`get_journal_insights_instructions\`
 
-## AI-Powered Features
-- **Tag Suggestions**: Use \`get_tag_suggestions_instructions\` when users want help organizing entries with appropriate tags
-- **Journal Insights**: Use \`get_journal_insights_instructions\` when users want to see patterns or get overviews of their journaling
-
-Note: MCP prompts are also available for clients that support them: \`suggest_tags\` and \`summarize_journal_entries\`
+## Constraints
+- All operations require authentication
+- MCP-UI features only available in supporting clients
+- Tag suggestions and journal insights require AI model access
 			`.trim(),
 		},
 	)
