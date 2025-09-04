@@ -1,25 +1,53 @@
-// TODO: There's not an established pattern for authentication with MCP UI. One
-// way we could do this is with a token as a query param that is short-lived so
-// it's not a problem to include in logs. And then that can be swapped out for a
-// proper long-lived token. Should be relatively straightforward. But when you
-// add the long-lived stuff, that gets complicated quickly. So there's got to be
-// another way to do this and we're punting on that for now until something
-// shows up in the spec that makes this easier.
-
-import { invariantResponse } from '@epic-web/invariant'
-import { getTokenInfo } from '#app/utils/auth.ts'
-import { useMcpUiInit } from '#app/utils/mcp.ts'
+import { z } from 'zod'
+import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
+import { useMcpUiInit, waitForRenderData } from '#app/utils/mcp.client.ts'
 import { type Route } from './+types/journal-viewer.tsx'
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-	// const tokenInfo = await getTokenInfo(request, context.cloudflare.env)
-	// invariantResponse(tokenInfo, 'Unauthorized', { status: 401 })
-	// const entries = await context.db.getEntries(Number(tokenInfo.userId))
-	//
-	const user = await context.db.getUserByEmail('me+goose@kentcdodds.com')
-	invariantResponse(user, 'User not found', { status: 404 })
-	const entries = await context.db.getEntries(user.id)
-	return { entries }
+export async function clientLoader() {
+	const renderData = await waitForRenderData(
+		z.object({
+			entries: z.array(
+				z.object({
+					id: z.number(),
+					title: z.string(),
+					tagCount: z.number(),
+				}),
+			),
+		}),
+		{ timeoutMs: 3_000 },
+	)
+	return { entries: renderData.entries }
+}
+
+export function HydrateFallback() {
+	return (
+		<div className="flex min-h-48 flex-col items-center justify-center py-12">
+			<svg
+				className="text-muted-foreground mb-4 h-8 w-8 animate-spin"
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				aria-label="Loading"
+			>
+				<circle
+					className="opacity-25"
+					cx="12"
+					cy="12"
+					r="10"
+					stroke="currentColor"
+					strokeWidth="4"
+				/>
+				<path
+					className="opacity-75"
+					fill="currentColor"
+					d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+				/>
+			</svg>
+			<p className="text-muted-foreground text-lg">
+				Waiting for journal entries...
+			</p>
+		</div>
+	)
 }
 
 export default function JournalViewer({ loaderData }: Route.ComponentProps) {
@@ -91,4 +119,8 @@ export default function JournalViewer({ loaderData }: Route.ComponentProps) {
 			</div>
 		</div>
 	)
+}
+
+export function ErrorBoundary() {
+	return <GeneralErrorBoundary />
 }

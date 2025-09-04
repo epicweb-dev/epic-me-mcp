@@ -1,4 +1,19 @@
 import { useEffect, useState } from 'react'
+import { type z } from 'zod'
+
+// Module-level queue for render data events
+const renderDataQueue: Array<{ type: string; payload: any }> = []
+
+// Set up global listener immediately when module loads
+window.addEventListener(
+	'message',
+	(event) => {
+		if (event.data?.type === 'ui-lifecycle-iframe-render-data') {
+			renderDataQueue.push(event.data)
+		}
+	},
+	{ once: false },
+)
 
 export function useMcpUiInit() {
 	useEffect(() => {
@@ -154,5 +169,61 @@ export function sendPrompt(
 		}
 
 		window.addEventListener('message', handleMessage, { signal })
+	})
+}
+
+export function waitForRenderData<RenderData>(
+	schema: z.ZodSchema<RenderData>,
+	opts: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<RenderData> {
+	const { signal, timeoutMs = 3_000 } = opts
+
+	return new Promise((resolve, reject) => {
+		// Check if we already received the data
+		const queuedEvent = renderDataQueue.find(
+			(event) => event.type === 'ui-lifecycle-iframe-render-data',
+		)
+		if (queuedEvent) {
+			const result = schema.safeParse(queuedEvent.payload.renderData)
+			return result.success ? resolve(result.data) : reject(result.error)
+		}
+
+		// Otherwise, set up the normal listening logic
+		const timeoutSignal =
+			typeof timeoutMs === 'number' ? AbortSignal.timeout(timeoutMs) : undefined
+
+		const combined: AbortSignal =
+			signal && timeoutSignal
+				? AbortSignal.any([signal, timeoutSignal])
+				: (signal ?? timeoutSignal ?? new AbortController().signal)
+
+		function cleanup() {
+			window.removeEventListener('message', handleMessage)
+			combined.removeEventListener?.('abort', onAbort as EventListener)
+		}
+
+		function onAbort() {
+			cleanup()
+			const reason =
+				(combined as any).reason ??
+				new DOMException('Timed out waiting for render data', 'TimeoutError')
+			reject(reason)
+		}
+
+		function handleMessage(event: MessageEvent) {
+			if (event.data?.type !== 'ui-lifecycle-iframe-render-data') return
+
+			const result = schema.safeParse(event.data.payload)
+			cleanup()
+			return result.success ? resolve(result.data) : reject(result.error)
+		}
+
+		combined.addEventListener('abort', onAbort, { once: true })
+		window.addEventListener('message', handleMessage, {
+			once: true,
+			signal: combined,
+		})
+
+		if (combined.aborted) onAbort()
 	})
 }

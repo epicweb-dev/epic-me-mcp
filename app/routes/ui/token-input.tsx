@@ -3,7 +3,7 @@ import {
 	sendPrompt,
 	useFormSubmissionCapability,
 	useMcpUiInit,
-} from '#app/utils/mcp.ts'
+} from '#app/utils/mcp.client.ts'
 import { type Route } from './+types/token-input.tsx'
 
 export async function loader({ request }: { request: Request }) {

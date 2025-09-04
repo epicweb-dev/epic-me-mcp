@@ -142,10 +142,11 @@ export async function initializeTools(agent: EpicMeMCP) {
 					openWorldHint: false,
 				},
 			},
-			async ({}, { requestInfo }) => {
+			async ({ requestInfo }) => {
 				const user = await agent.requireUser()
 				const baseUrl = getDomainUrl(requestInfo?.headers)
 				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
+				const entries = await agent.db.getEntries(user.id)
 				return {
 					content: [
 						createText(
@@ -158,6 +159,10 @@ export async function initializeTools(agent: EpicMeMCP) {
 								iframeUrl: uiUrl.toString(),
 							},
 							encoding: 'text',
+							uiMetadata: {
+								'preferred-frame-size': ['800px', '1200px'],
+								'initial-render-data': { entries },
+							},
 						}),
 					],
 				}
