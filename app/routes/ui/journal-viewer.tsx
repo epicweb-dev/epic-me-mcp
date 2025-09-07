@@ -3,7 +3,7 @@ import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { useMcpUiInit, waitForRenderData } from '#app/utils/mcp.client.ts'
 import { type Route } from './+types/journal-viewer.tsx'
 
-export async function clientLoader() {
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const renderData = await waitForRenderData(
 		z.object({
 			entries: z.array(
@@ -14,7 +14,7 @@ export async function clientLoader() {
 				}),
 			),
 		}),
-		{ timeoutMs: 3_000 },
+		{ signal: request.signal, timeoutMs: 3_000 },
 	)
 	return { entries: renderData.entries }
 }
