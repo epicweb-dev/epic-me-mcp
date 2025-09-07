@@ -160,7 +160,6 @@ export async function initializeTools(agent: EpicMeMCP) {
 							},
 							encoding: 'text',
 							uiMetadata: {
-								'preferred-frame-size': ['800px', '1200px'],
 								'initial-render-data': { entries },
 							},
 						}),
