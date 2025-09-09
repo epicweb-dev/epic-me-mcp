@@ -1,6 +1,3 @@
-import { invariant } from '@epic-web/invariant'
-import { type RequestInfo } from '@modelcontextprotocol/sdk/types.js'
-
 export function withCors({
 	getCorsHeaders,
 	handler,
@@ -53,14 +50,4 @@ export function mergeHeaders(
 		}
 	}
 	return merged
-}
-
-export function getDomainUrl(headers?: RequestInfo['headers']) {
-	invariant(headers, 'Headers are required')
-
-	const host = headers['x-original-host']
-	const protocol = headers['x-original-proto']
-	invariant(host, 'Host is required')
-	invariant(protocol, 'Protocol is required')
-	return `${protocol}//${host}`
 }

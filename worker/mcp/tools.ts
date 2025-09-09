@@ -14,9 +14,9 @@ import {
 	tagIdSchema,
 	entryTagIdSchema,
 	entryWithTagsSchema,
+	entryIdSchema,
 } from '../db/schema.ts'
 import { sendEmail } from '../utils/email.ts'
-import { getDomainUrl } from '../utils/misc.ts'
 import { type EpicMeMCP } from './index.ts'
 import {
 	createSuggestTagsPrompt,
@@ -57,7 +57,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				description: `Authenticate to your account or create a new account. Ask for the user's email address before authenticating. Only do this when explicitely told to do so.`,
 				annotations: {
 					destructiveHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					email: z
 						.string()
@@ -65,8 +65,8 @@ export async function initializeTools(agent: EpicMeMCP) {
 						.describe("The user's email address for their account"),
 				},
 			},
-			async ({ email }, { requestInfo }) => {
-				const baseUrl = getDomainUrl(requestInfo?.headers)
+			async ({ email }) => {
+				const baseUrl = agent.requireDomain()
 				const grant = await agent.requireGrantId()
 				const { otp } = await generateTOTP({
 					period: 30,
@@ -108,7 +108,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					destructiveHint: false,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					validationToken: z.string().describe('The 6-digit token'),
 				},
@@ -140,11 +140,11 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 			},
-			async ({ requestInfo }) => {
+			async () => {
 				const user = await agent.requireUser()
-				const baseUrl = getDomainUrl(requestInfo?.headers)
+				const baseUrl = agent.requireDomain()
 				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
 				const entries = await agent.db.getEntries(user.id)
 				return {
@@ -168,6 +168,41 @@ export async function initializeTools(agent: EpicMeMCP) {
 			},
 		),
 		agent.server.registerTool(
+			'view_entry',
+			{
+				title: 'View Entry',
+				description: 'View a journal entry by ID visually',
+				annotations: {
+					readOnlyHint: true,
+					openWorldHint: false,
+				} satisfies ToolAnnotations,
+				inputSchema: entryIdSchema,
+			},
+			async ({ id }) => {
+				const user = await agent.requireUser()
+				const baseUrl = agent.requireDomain()
+				const iframeUrl = new URL('/ui/entry-viewer', baseUrl)
+				const entry = await agent.db.getEntry(user.id, id)
+				invariant(entry, `Entry with ID "${id}" not found`)
+
+				return {
+					content: [
+						createUIResource({
+							uri: `ui://view-entry/${id}`,
+							content: {
+								type: 'externalUrl',
+								iframeUrl: iframeUrl.toString(),
+							},
+							encoding: 'text',
+							uiMetadata: {
+								'initial-render-data': { entry },
+							},
+						}),
+					],
+				}
+			},
+		),
+		agent.server.registerTool(
 			'whoami',
 			{
 				title: 'Who Am I',
@@ -175,7 +210,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				outputSchema: { user: userSchema },
 			},
 			async () => {
@@ -194,15 +229,17 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				outputSchema: {
 					success: z.boolean(),
 					message: z.string(),
 				},
 			},
 			async () => {
+				const { grantId } = agent.props ?? {}
+				invariant(grantId, 'You must be logged in to perform this action')
 				const user = await agent.requireUser()
-				await agent.db.unclaimGrant(user.id, agent.props.grantId)
+				await agent.db.unclaimGrant(user.id, grantId)
 				const structuredContent = {
 					success: true,
 					message: 'Logout successful',
@@ -221,7 +258,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					destructiveHint: false,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: createEntryInputSchema,
 				outputSchema: { entry: entryWithTagsSchema },
 			},
@@ -261,7 +298,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					id: z.number().describe('The ID of the entry'),
 				},
@@ -292,7 +329,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					tagIds: z
 						.array(z.number())
@@ -337,7 +374,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					destructiveHint: false,
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: updateEntryInputSchema,
 				outputSchema: { entry: entryWithTagsSchema },
 			},
@@ -368,7 +405,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					id: z.number().describe('The ID of the entry'),
 				},
@@ -421,7 +458,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					destructiveHint: false,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: createTagInputSchema,
 				outputSchema: { tag: tagSchema },
 			},
@@ -450,7 +487,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					id: z.number().describe('The ID of the tag'),
 				},
@@ -478,7 +515,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 			},
 			async () => {
 				const user = await agent.requireUser()
@@ -517,7 +554,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					destructiveHint: false,
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: updateTagInputSchema,
 				outputSchema: { tag: tagSchema },
 			},
@@ -545,7 +582,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 				annotations: {
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: tagIdSchema,
 				outputSchema: { success: z.boolean(), tag: tagSchema },
 			},
@@ -598,7 +635,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 					destructiveHint: false,
 					idempotentHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: entryTagIdSchema,
 				outputSchema: { success: z.boolean(), entryTag: entryTagSchema },
 			},
@@ -649,7 +686,7 @@ export async function initializePromptTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					entryId: z
 						.number()
@@ -679,7 +716,7 @@ export async function initializePromptTools(agent: EpicMeMCP) {
 				annotations: {
 					readOnlyHint: true,
 					openWorldHint: false,
-				},
+				} satisfies ToolAnnotations,
 				inputSchema: {
 					tagIds: z
 						.array(z.number())
@@ -706,6 +743,20 @@ export async function initializePromptTools(agent: EpicMeMCP) {
 		),
 	)
 }
+
+type ToolAnnotations = {
+	// defaults to true, so only allow false
+	openWorldHint?: false
+} & (
+	| {
+			// when readOnlyHint is true, none of the other annotations can be changed
+			readOnlyHint: true
+	  }
+	| {
+			destructiveHint?: false // Only allow false (default is true)
+			idempotentHint?: true // Only allow true (default is false)
+	  }
+)
 
 function createText(text: unknown): CallToolResult['content'][number] {
 	if (typeof text === 'string') {

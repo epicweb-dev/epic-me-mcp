@@ -1,9 +1,5 @@
 import { useEffect, useReducer, useRef } from 'react'
-import {
-	sendPrompt,
-	useFormSubmissionCapability,
-	useMcpUiInit,
-} from '#app/utils/mcp.client.ts'
+import { sendMcpMessage, useMcpUiInit } from '#app/utils/mcp.ts'
 import { type Route } from './+types/token-input.tsx'
 
 export async function loader({ request }: { request: Request }) {
@@ -45,7 +41,6 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 	const [state, dispatch] = useReducer(tokenReducer, { type: 'idle' })
 	const formRef = useRef<HTMLFormElement>(null)
 	const abortControllerRef = useRef<AbortController | null>(null)
-	const canUseOnSubmit = useFormSubmissionCapability()
 
 	useMcpUiInit()
 
@@ -90,12 +85,14 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 		dispatch({ type: 'START_VALIDATION' })
 
 		try {
-			await sendPrompt(
-				`Please validate this auth token with the epicme validate_token tool: ${token}`,
-				abortControllerRef.current?.signal,
+			await sendMcpMessage(
+				'prompt',
+				{
+					prompt: `Please validate this auth token with the epicme validate_token tool: ${token}`,
+				},
+				{ signal: abortControllerRef.current?.signal },
 			)
 
-			console.log('Token validation prompt sent to parent')
 			dispatch({ type: 'VALIDATION_SUCCESS' })
 		} catch (error) {
 			console.error('Failed to send prompt:', error)
@@ -114,8 +111,7 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 	}
 
 	function handleKeyUp(e: React.KeyboardEvent<HTMLInputElement>) {
-		// Allow Enter key to trigger validation even when form submission is blocked
-		if (e.key === 'Enter' && !canUseOnSubmit) {
+		if (e.key === 'Enter') {
 			e.preventDefault()
 			void validateToken()
 		}
@@ -205,9 +201,9 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 					</div>
 
 					<button
-						type={canUseOnSubmit ? 'submit' : 'button'}
+						type="submit"
 						id="submit-btn"
-						onClick={canUseOnSubmit ? undefined : handleButtonClick}
+						onClick={handleButtonClick}
 						disabled={state.type === 'validating'}
 						aria-describedby="submit-status"
 						className={`focus:ring-offset-background w-full rounded-lg px-4 py-3 text-base font-medium transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${

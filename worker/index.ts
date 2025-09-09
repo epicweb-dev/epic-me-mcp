@@ -2,7 +2,7 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { createRequestHandler } from 'react-router'
 import { DB } from './db'
 import { EpicMeMCP } from './mcp/index.ts'
-import { mergeHeaders, withCors } from './utils/misc.ts'
+import { withCors } from './utils/misc.ts'
 
 const requestHandler = createRequestHandler(
 	() => import('virtual:react-router/server-build'),
@@ -27,16 +27,11 @@ const oauthProvider = new OAuthProvider({
 		fetch(request: Request, env: Env, ctx: ExecutionContext) {
 			const url = new URL(request.url)
 			if (url.pathname === '/mcp') {
-				const newRequest = new Request(request, {
-					headers: mergeHeaders(request.headers, {
-						'x-original-host': url.host,
-						'x-original-proto': url.protocol,
-					}),
-				})
+				ctx.props.baseUrl = url.origin
 
 				return EpicMeMCP.serve('/mcp', {
 					binding: 'EPIC_ME_MCP_OBJECT',
-				}).fetch(newRequest, env, ctx)
+				}).fetch(request, env, ctx)
 			}
 
 			return new Response('Not found', { status: 404 })

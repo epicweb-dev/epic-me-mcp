@@ -1,3 +1,38 @@
+import { useEffect, useId, useState } from 'react'
+
+const timers = new Map<string, number>()
+const controllers = new Map<string, AbortController>()
+
+// this is complicated because of StrictMode 😡
+export function useUnmountSignal() {
+	const id = useId()
+	let ctrl = controllers.get(id)
+	if (!ctrl) {
+		ctrl = new AbortController()
+		controllers.set(id, ctrl)
+	}
+
+	useEffect(() => {
+		// StrictMode re-mount cancels the pending fake-unmount abort
+		const t = timers.get(id)
+		if (t) {
+			clearTimeout(t)
+			timers.delete(id)
+		}
+
+		return () => {
+			const timeout = setTimeout(() => {
+				controllers.get(id)?.abort()
+				controllers.delete(id)
+				timers.delete(id)
+			}, 0)
+			timers.set(id, timeout as unknown as number)
+		}
+	}, [id])
+
+	return ctrl.signal
+}
+
 export function getErrorMessage(error: unknown) {
 	if (typeof error === 'string') return error
 	if (
@@ -12,99 +47,50 @@ export function getErrorMessage(error: unknown) {
 	return 'Unknown Error'
 }
 
-export function getDomainUrl(request: Request) {
-	const host =
-		request.headers.get('X-Forwarded-Host') ??
-		request.headers.get('host') ??
-		new URL(request.url).host
-	const protocol = request.headers.get('X-Forwarded-Proto') ?? 'http'
-	return `${protocol}://${host}`
-}
-
-export function getReferrerRoute(request: Request) {
-	// spelling errors and whatever makes this annoyingly inconsistent
-	// in my own testing, `referer` returned the right value, but 🤷‍♂️
-	const referrer =
-		request.headers.get('referer') ??
-		request.headers.get('referrer') ??
-		request.referrer
-	const domain = getDomainUrl(request)
-	if (referrer?.startsWith(domain)) {
-		return referrer.slice(domain.length)
-	} else {
-		return '/'
-	}
+function callAll<Args extends Array<unknown>>(
+	...fns: Array<((...args: Args) => unknown) | undefined>
+) {
+	return (...args: Args) => fns.forEach((fn) => fn?.(...args))
 }
 
 /**
- * Merge multiple headers objects into one (uses set so headers are overridden)
+ * Use this hook with a button and it will make it so the first click sets a
+ * `doubleCheck` state to true, and the second click will actually trigger the
+ * `onClick` handler. This allows you to have a button that can be like a
+ * "are you sure?" experience for the user before doing destructive operations.
  */
-export function mergeHeaders(
-	...headers: Array<ResponseInit['headers'] | null | undefined>
-) {
-	const merged = new Headers()
-	for (const header of headers) {
-		if (!header) continue
-		for (const [key, value] of new Headers(header).entries()) {
-			merged.set(key, value)
+export function useDoubleCheck() {
+	const [doubleCheck, setDoubleCheck] = useState(false)
+
+	function getButtonProps(
+		props?: React.ButtonHTMLAttributes<HTMLButtonElement>,
+	) {
+		const onBlur: React.ButtonHTMLAttributes<HTMLButtonElement>['onBlur'] =
+			() => setDoubleCheck(false)
+
+		const onClick: React.ButtonHTMLAttributes<HTMLButtonElement>['onClick'] =
+			doubleCheck
+				? undefined
+				: (e) => {
+						e.preventDefault()
+						setDoubleCheck(true)
+					}
+
+		const onKeyUp: React.ButtonHTMLAttributes<HTMLButtonElement>['onKeyUp'] = (
+			e,
+		) => {
+			if (e.key === 'Escape') {
+				setDoubleCheck(false)
+			}
+		}
+
+		return {
+			...props,
+			onBlur: callAll(onBlur, props?.onBlur),
+			onClick: callAll(onClick, props?.onClick),
+			onKeyUp: callAll(onKeyUp, props?.onKeyUp),
 		}
 	}
-	return merged
-}
 
-/**
- * Combine multiple header objects into one (uses append so headers are not overridden)
- */
-export function combineHeaders(
-	...headers: Array<ResponseInit['headers'] | null | undefined>
-) {
-	const combined = new Headers()
-	for (const header of headers) {
-		if (!header) continue
-		for (const [key, value] of new Headers(header).entries()) {
-			combined.append(key, value)
-		}
-	}
-	return combined
-}
-
-/**
- * Combine multiple response init objects into one (uses combineHeaders)
- */
-export function combineResponseInits(
-	...responseInits: Array<ResponseInit | null | undefined>
-) {
-	let combined: ResponseInit = {}
-	for (const responseInit of responseInits) {
-		combined = {
-			...responseInit,
-			headers: combineHeaders(combined.headers, responseInit?.headers),
-		}
-	}
-	return combined
-}
-
-export async function downloadFile(url: string, retries: number = 0) {
-	const MAX_RETRIES = 3
-	try {
-		const response = await fetch(url)
-		if (!response.ok) {
-			throw new Error(`Failed to fetch image with status ${response.status}`)
-		}
-		const contentType = response.headers.get('content-type') ?? 'image/jpg'
-		const arrayBuffer = await response.arrayBuffer()
-		const file = new File([arrayBuffer], 'downloaded-file', {
-			type: contentType,
-		})
-		return file
-	} catch (e) {
-		if (retries > MAX_RETRIES) throw e
-		return downloadFile(url, retries + 1)
-	}
-}
-
-export function removeEmpty(obj: Record<string, unknown>) {
-	return Object.fromEntries(
-		Object.entries(obj).filter(([_, value]) => value !== undefined),
-	)
+	return { doubleCheck, getButtonProps }
 }

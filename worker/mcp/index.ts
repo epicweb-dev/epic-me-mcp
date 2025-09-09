@@ -18,7 +18,7 @@ import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
 
 type State = { loggingLevel: LoggingLevel }
-type Props = { grantId: string; grantUserId: string }
+type Props = { grantId: string; grantUserId: string; baseUrl: string }
 
 export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	db!: DB
@@ -115,7 +115,7 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 	}
 
 	async requireUser() {
-		const { grantId } = this.props
+		const { grantId } = this.props ?? {}
 		invariant(grantId, 'You must be logged in to perform this action')
 		const user = await this.db.getUserByGrantId(grantId)
 		invariant(
@@ -126,7 +126,7 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 	}
 
 	async requireGrantId() {
-		const { grantId } = this.props
+		const { grantId } = this.props ?? {}
 		invariant(grantId, 'You must be logged in to perform this action')
 		const grant = await this.db.getGrant(grantId)
 		invariant(
@@ -136,12 +136,24 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 		return grant
 	}
 
+	requireDomain() {
+		const baseUrl = this.props?.baseUrl
+		invariant(
+			baseUrl,
+			'This should never happen, but somehow we did not get the baseUrl from the request handler',
+		)
+		return baseUrl
+	}
+
 	async updateAvailableItems() {
 		// No clients seem to support this yet...
 		const clientSupport = false
 		if (!clientSupport) return
 
-		const user = await this.db.getUserByGrantId(this.props.grantId)
+		const { grantId } = this.props ?? {}
+		if (!grantId) return
+
+		const user = await this.db.getUserByGrantId(grantId)
 
 		for (const tool of this.unauthenticatedTools) {
 			if (user && tool.enabled) tool.disable()

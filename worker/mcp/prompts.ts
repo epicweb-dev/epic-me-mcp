@@ -22,7 +22,7 @@ export async function initializePrompts(agent: EpicMeMCP) {
 				},
 			},
 			async ({ entryId }) => {
-				const user = await requireUser()
+				const user = await agent.requireUser()
 				invariant(entryId, 'entryId is required')
 				const entryIdNum = Number(entryId)
 				invariant(!Number.isNaN(entryIdNum), 'entryId must be a valid number')
@@ -82,17 +82,6 @@ export async function initializePrompts(agent: EpicMeMCP) {
 			},
 		),
 	]
-
-	async function requireUser() {
-		const { grantId } = agent.props
-		invariant(grantId, 'You must be logged in to perform this action')
-		const user = await agent.db.getUserByGrantId(grantId)
-		invariant(
-			user,
-			`No user found with the given grantId. Please claim the grant by invoking the "authenticate" tool.`,
-		)
-		return user
-	}
 }
 
 // Prompt creation functions that can be reused by both prompts and tools
