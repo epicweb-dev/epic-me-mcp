@@ -26,7 +26,7 @@
     "@epic-web/totp": "^4.0.1",
     "@mcp-ui/server": "^5.10.0",
     "@modelcontextprotocol/sdk": "^1.17.3",
-    "agents": "https://pkg.pr.new/cloudflare/agents@415",
+    "agents": "^0.1.0",
     "isbot": "^5.1.29",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
