@@ -42,6 +42,7 @@ export async function initializeTools(agent: EpicMeMCP) {
 			'get_client_capabilities',
 			{
 				title: 'Get Client Capabilities',
+				description: 'Get the client capabilities',
 			},
 			async () => {
 				const clientCapabilities = agent.server.server.getClientCapabilities()
