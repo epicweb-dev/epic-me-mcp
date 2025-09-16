@@ -57,6 +57,7 @@ export default {
 			}
 		},
 		handler: async (request: Request, env: Env, ctx: ExecutionContext) => {
+			console.log({ authorization: request.headers.get('authorization') })
 			return oauthProvider.fetch(request, env, ctx)
 		},
 	}),
