@@ -1,0 +1,9 @@
+agents:
+  journaler:
+    name: Journaler
+    model: gpt-4.1
+    mcpServers: EpicMeMCP
+
+mcpServers:
+  EpicMeMCP:
+    url: http://localhost:8877/mcp

@@ -181,3 +181,5 @@ dist
 
 *.tsbuildinfo
 build
+
+*.db

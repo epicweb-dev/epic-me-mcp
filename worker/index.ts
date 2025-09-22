@@ -1,7 +1,7 @@
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider'
 import { createRequestHandler } from 'react-router'
 import { DB } from './db'
-import { EpicMeMCP } from './mcp/index.ts'
+import { EpicMeMCP, type Props } from './mcp/index.ts'
 import { withCors } from './utils/misc.ts'
 
 const requestHandler = createRequestHandler(
@@ -11,7 +11,7 @@ const requestHandler = createRequestHandler(
 
 // Default handler for non-MCP routes
 const defaultHandler = {
-	fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+	fetch: async (request: Request, env: Env, ctx: ExecutionContext<Props>) => {
 		return requestHandler(request, {
 			db: await DB.getInstance(env),
 			cloudflare: { env, ctx },
@@ -24,7 +24,7 @@ const oauthProvider = new OAuthProvider({
 	apiRoute: ['/mcp'],
 	apiHandler: {
 		// @ts-expect-error
-		fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		fetch(request: Request, env: Env, ctx: ExecutionContext<Props>) {
 			const url = new URL(request.url)
 			if (url.pathname === '/mcp') {
 				ctx.props.baseUrl = url.origin
