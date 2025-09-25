@@ -21,24 +21,24 @@
     "inspect": "mcp-inspector"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^0.0.10",
+    "@cloudflare/workers-oauth-provider": "^0.0.11",
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/totp": "^4.0.1",
     "@mcp-ui/server": "^5.11.0",
-    "@modelcontextprotocol/sdk": "^1.18.1",
+    "@modelcontextprotocol/sdk": "^1.18.2",
     "agents": "https://pkg.pr.new/cloudflare/agents@485",
-    "isbot": "^5.1.30",
+    "isbot": "^5.1.31",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-error-boundary": "^6.0.0",
-    "react-router": "^7.9.1",
+    "react-router": "^7.9.2",
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.13.3",
+    "@cloudflare/vite-plugin": "^1.13.6",
     "@epic-web/config": "^1.21.3",
     "@modelcontextprotocol/inspector": "^0.16.8",
-    "@react-router/dev": "^7.9.1",
+    "@react-router/dev": "^7.9.2",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
@@ -51,7 +51,7 @@
     "vite": "^7.1.7",
     "vite-plugin-devtools-json": "^1.0.0",
     "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^4.38.0"
+    "wrangler": "^4.40.1"
   },
   "prettier": "@epic-web/config/prettier",
   "license": "GPL-3.0-only"
