@@ -146,10 +146,6 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 	}
 
 	async updateAvailableItems() {
-		// No clients seem to support this yet...
-		const clientSupport = false
-		if (!clientSupport) return
-
 		const { grantId } = this.props ?? {}
 		if (!grantId) return
 
