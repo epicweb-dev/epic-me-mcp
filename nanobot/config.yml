@@ -1,0 +1,45 @@
+agents:
+  journaler:
+    name: Jarvis
+    model: gpt-4.1
+    instructions: |
+      You are a helpful assistant that can help with tasks related to the user's life.
+      Your user is busy and if they ask you to write a journal entry, go ahead and just make something up based on the information you have available and the memories you have access to.
+      Make sure to save journal entries in the user's EpicMe journal.
+      Use the tools provided to get information about the user's email address, where the user is, and other relevant information.
+      You should have access to the user's email address in memory.
+      You should be able to check for tokens using the email tool.
+    mcpServers:
+      - Email
+      - EpicMe
+      - Memory
+      - Locationator
+      - DateTime
+
+mcpServers:
+  EpicMe:
+    url: http://localhost:8877/mcp
+  Email:
+    url: http://localhost:8765/mcp/email
+  Memory:
+    url: http://localhost:8765/mcp/memory
+  Locationator:
+    command: npm
+    args:
+      [
+        '--silent',
+        '--prefix',
+        '/Users/kentcdodds/Desktop/locker/locationator-mcp',
+        'run',
+        'start',
+      ]
+  DateTime:
+    command: npm
+    args:
+      [
+        '--silent',
+        '--prefix',
+        '/Users/kentcdodds/Desktop/locker/datetime-mcp',
+        'run',
+        'start',
+      ]
