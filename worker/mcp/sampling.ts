@@ -143,18 +143,16 @@ For suggestions: [{"id": 1, "confidence": 0.9, "reasoning": "Entry mentions work
 		})
 		.filter(Boolean)
 
-	if (['debug', 'info'].includes(agent.state.loggingLevel)) {
-		void agent.server.server.sendLoggingMessage({
-			level: 'info',
-			data: {
-				message: 'Auto-applied high-confidence tags to entry',
-				addedTags,
-				entry: updatedEntry,
-				highConfidenceCount: highConfidenceTags.length,
-				lowConfidenceCount: lowConfidenceTags.length,
-			},
-		})
-	}
+	void agent.server.server.sendLoggingMessage({
+		level: 'info',
+		data: {
+			message: 'Auto-applied high-confidence tags to entry',
+			addedTags,
+			entry: updatedEntry,
+			highConfidenceCount: highConfidenceTags.length,
+			lowConfidenceCount: lowConfidenceTags.length,
+		},
+	})
 }
 
 const existingTagSchema = z.object({

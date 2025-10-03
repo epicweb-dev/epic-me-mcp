@@ -1,4 +1,3 @@
-import { invariant } from '@epic-web/invariant'
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { type EpicMeMCP } from './index.ts'
 
@@ -57,7 +56,8 @@ export async function initializeResources(agent: EpicMeMCP) {
 			async (uri: URL, { id }) => {
 				const user = await agent.requireUser()
 				const entry = await agent.db.getEntry(user.id, Number(id))
-				invariant(entry, `Entry with ID "${id}" not found`)
+				const maybeResponse = get404Error(entry, uri.toString())
+				if (maybeResponse) return maybeResponse
 				return {
 					contents: [
 						{
@@ -115,7 +115,8 @@ export async function initializeResources(agent: EpicMeMCP) {
 			async (uri: URL, { id }) => {
 				const user = await agent.requireUser()
 				const tag = await agent.db.getTag(user.id, Number(id))
-				invariant(tag, `Tag with ID "${id}" not found`)
+				const maybeResponse = get404Error(tag, uri.toString())
+				if (maybeResponse) return maybeResponse
 				return {
 					contents: [
 						{
@@ -128,4 +129,17 @@ export async function initializeResources(agent: EpicMeMCP) {
 			},
 		),
 	]
+}
+
+function get404Error(resource: any, uri: string) {
+	if (!resource) {
+		return {
+			contents: [],
+			error: {
+				code: -32002,
+				message: 'Resource not found',
+				data: { uri },
+			},
+		}
+	}
 }

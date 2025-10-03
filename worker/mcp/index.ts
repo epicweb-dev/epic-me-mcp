@@ -6,10 +6,6 @@ import {
 	type RegisteredResourceTemplate,
 	type RegisteredTool,
 } from '@modelcontextprotocol/sdk/server/mcp.js'
-import {
-	SetLevelRequestSchema,
-	type LoggingLevel,
-} from '@modelcontextprotocol/sdk/types.js'
 import { type Connection } from 'agents'
 import { McpAgent } from 'agents/mcp'
 import { DB } from '../db'
@@ -17,12 +13,12 @@ import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
 
-type State = { loggingLevel: LoggingLevel }
+type State = {}
 export type Props = { grantId: string; grantUserId: string; baseUrl: string }
 
 export class EpicMeMCP extends McpAgent<Env, State, Props> {
 	db!: DB
-	initialState = { loggingLevel: 'info' as const }
+	initialState = {}
 	unauthenticatedTools: Array<RegisteredTool> = []
 	authenticatedTools: Array<RegisteredTool> = []
 	unauthenticatedResources: Array<
@@ -93,14 +89,6 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 	}
 
 	async init() {
-		this.server.server.setRequestHandler(
-			SetLevelRequestSchema,
-			async (request) => {
-				this.setState({ ...this.state, loggingLevel: request.params.level })
-				return {}
-			},
-		)
-
 		await initializeTools(this)
 		await initializeResources(this)
 		await initializePrompts(this)

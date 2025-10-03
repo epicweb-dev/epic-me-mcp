@@ -86,9 +86,12 @@ export default function TokenInput({ loaderData }: Route.ComponentProps) {
 
 		try {
 			await sendMcpMessage(
-				'prompt',
+				'tool',
 				{
-					prompt: `Please validate this auth token with the epicme validate_token tool: ${token}`,
+					toolName: 'validate_token',
+					params: {
+						validationToken: token,
+					},
 				},
 				{ signal: abortControllerRef.current?.signal },
 			)
