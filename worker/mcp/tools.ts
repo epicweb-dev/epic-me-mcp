@@ -27,31 +27,6 @@ import { suggestTagsSampling } from './sampling.ts'
 export async function initializeTools(agent: EpicMeMCP) {
 	agent.unauthenticatedTools.push(
 		agent.server.registerTool(
-			'get_extra_info',
-			{
-				title: 'Get Extra Info',
-				description: 'Get extra info',
-			},
-			async (extra) => {
-				return {
-					content: [createText({ extra })],
-				}
-			},
-		),
-		agent.server.registerTool(
-			'get_client_capabilities',
-			{
-				title: 'Get Client Capabilities',
-				description: 'Get the client capabilities',
-			},
-			async () => {
-				const clientCapabilities = agent.server.server.getClientCapabilities()
-				return {
-					content: [createText(clientCapabilities ?? 'No client capabilities')],
-				}
-			},
-		),
-		agent.server.registerTool(
 			'authenticate',
 			{
 				title: 'Authenticate',
