@@ -1,3 +1,5 @@
+import '#app/utils/mcp-ui-compat.client.ts'
+
 import { useEffect } from 'react'
 import { type z } from 'zod'
 
@@ -81,6 +83,20 @@ function sendMcpMessage<TypeType extends McpMessageType>(
 		}
 
 		console.log('posting to parent', { type, messageId, payload })
+		if (type === 'tool') {
+			return resolve(
+				// @ts-expect-error ... we'll make this great eventually
+				window.openai.callTool(payload.toolName, payload.params).then((r) => {
+					// @ts-expect-error ... we'll make this great eventually
+					void window.openai.sendFollowUpMessage({
+						// @ts-expect-error ... we'll make this great eventually
+						prompt: `I have called ${payload.toolName} with params ${JSON.stringify(payload.params)} and got the following response: ${JSON.stringify(r)}`,
+					})
+					return r
+				}),
+			)
+		}
+
 		window.parent.postMessage({ type, messageId, payload }, '*')
 
 		function handleMessage(event: MessageEvent) {
@@ -114,24 +130,39 @@ export { sendMcpMessage }
 export function waitForRenderData<RenderData>(
 	schema: z.ZodSchema<RenderData>,
 ): Promise<RenderData> {
-	return new Promise((resolve, reject) => {
-		window.parent.postMessage({ type: 'ui-lifecycle-iframe-ready' }, '*')
-
-		function handleMessage(event: MessageEvent) {
-			if (event.data?.type !== 'ui-lifecycle-iframe-render-data') return
-			window.removeEventListener('message', handleMessage)
-
-			const { renderData, error } = event.data.payload
-
-			if (error) return reject(error)
-			if (!schema) return resolve(renderData)
-
-			const parseResult = schema.safeParse(renderData)
-			if (!parseResult.success) return reject(parseResult.error)
-
-			return resolve(parseResult.data)
+	let toolOutput = window.openai?.toolOutput
+	if (toolOutput) {
+		const parseResult = schema.safeParse({ toolOutput })
+		if (parseResult.success) {
+			return Promise.resolve(parseResult.data)
 		}
+		throw new Error(parseResult.error.message)
+	}
 
-		window.addEventListener('message', handleMessage)
+	return new Promise<RenderData>((resolve, reject) => {
+		Object.defineProperty(window.openai, 'toolOutput', {
+			get() {
+				return toolOutput
+			},
+			set(newValue: any) {
+				toolOutput = newValue
+				const parseResult = schema.safeParse({ toolOutput })
+				if (parseResult.success) {
+					resolve(parseResult.data)
+				} else {
+					reject(new Error(parseResult.error.message))
+				}
+			},
+			configurable: true,
+			enumerable: true,
+		})
 	})
+}
+
+declare global {
+	interface Window {
+		openai?: {
+			toolOutput?: any
+		}
+	}
 }
