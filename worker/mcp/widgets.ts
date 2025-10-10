@@ -35,7 +35,8 @@ const widgets = [
 	createWidget({
 		name: 'test-react-router',
 		title: 'Test React Router',
-		route: '/ui/test',
+		route: '/',
+		// route: '/ui/test',
 		description:
 			'Renders an interactive test widget displaying the structured content passed from the tool, including a message confirming successful data transfer.',
 		invokingMessage: 'Getting you the test widget',

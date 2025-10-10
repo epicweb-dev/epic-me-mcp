@@ -69,7 +69,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 function ReactRouterChatSDKBootstrap({ baseUrl }: { baseUrl: string }) {
 	return (
 		<>
-			<base href={baseUrl}></base>
+			{/* <base href={baseUrl} /> */}
 			{/* <script>{`window.innerBaseUrl = ${JSON.stringify(baseUrl)}`}</script> */}
 			<script>
 				{'(' +
