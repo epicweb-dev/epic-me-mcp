@@ -1,86 +1,81 @@
+/**
+ * Design System Styles
+ * 
+ * These styles follow the OpenAI Apps SDK design guidelines:
+ * https://developers.openai.com/apps-sdk/concepts/design-guidelines
+ * 
+ * Key principles:
+ * - Platform-native system fonts (SF Pro, Roboto)
+ * - Limited font size variation (body and body-small preferred)
+ * - System colors for text, icons, and spatial elements
+ * - DO NOT override backgrounds or text colors (let system control these)
+ * - Brand colors ONLY on primary buttons/CTAs
+ * - WCAG AA contrast ratios for accessibility
+ * - Consistent spacing and corner radius
+ */
+
 @import 'tailwindcss' source('.');
 
 @theme {
 	--font-sans:
-		'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+		'Roboto', system-ui, ui-sans-serif, sans-serif, 'Apple Color Emoji',
 		'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 html,
 body {
-	@media (prefers-color-scheme: dark) {
-		color-scheme: dark;
-	}
+	/* Support both light and dark color schemes to match parent frame */
+	color-scheme: light dark;
+	/* Transparent background to inherit from parent frame when embedded */
+	background: transparent !important;
 }
 
 :root {
-	--radius: 0.5rem;
+	/* System-consistent corner radius per OpenAI Apps SDK guidelines */
+	--radius: 0.75rem;
 
-	--background: oklch(98% 0.02 320);
-	--foreground: oklch(20% 0.06 320);
+	/* Inherit system background and foreground - don't override */
+	/* Per guidelines: partners should not override backgrounds or text colors */
+	--background: transparent;
+	--foreground: light-dark(oklch(0% 0 0), oklch(100% 0 0));
 
-	--card: oklch(99% 0.015 320);
-	--card-foreground: oklch(20% 0.06 320);
+	/* Minimal card surface - barely distinguishable from background */
+	--card: light-dark(oklch(98% 0 0), oklch(10% 0 0));
+	--card-foreground: light-dark(oklch(0% 0 0), oklch(100% 0 0));
 
-	--popover: oklch(99% 0.015 320);
-	--popover-foreground: oklch(20% 0.06 320);
+	/* Popover surfaces */
+	--popover: light-dark(oklch(100% 0 0), oklch(10% 0 0));
+	--popover-foreground: light-dark(oklch(0% 0 0), oklch(100% 0 0));
 
+	/* Brand accent for primary actions (buttons, CTAs) - only place for brand color */
 	--primary: oklch(65% 0.15 320);
-	--primary-foreground: oklch(98% 0.02 320);
+	--primary-foreground: oklch(100% 0 0);
 
-	--secondary: oklch(85% 0.08 330);
-	--secondary-foreground: oklch(20% 0.06 320);
+	/* Secondary UI elements - neutral grays */
+	--secondary: light-dark(oklch(95% 0 0), oklch(20% 0 0));
+	--secondary-foreground: light-dark(oklch(0% 0 0), oklch(100% 0 0));
 
-	--muted: oklch(92% 0.04 320);
-	--muted-foreground: oklch(40% 0.07 320);
+	/* Muted elements - subtle text */
+	--muted: light-dark(oklch(96% 0 0), oklch(15% 0 0));
+	--muted-foreground: light-dark(oklch(45% 0 0), oklch(65% 0 0));
 
-	--accent: oklch(88% 0.06 340);
-	--accent-foreground: oklch(20% 0.06 320);
+	/* Accent elements (badges, highlights) - use sparingly */
+	--accent: light-dark(oklch(96% 0 0), oklch(15% 0 0));
+	--accent-foreground: light-dark(oklch(0% 0 0), oklch(100% 0 0));
 
-	--border: oklch(88% 0.05 320);
-	--input: oklch(88% 0.05 320);
-	--input-invalid: oklch(65% 0.2 0);
+	/* Borders and dividers - spatial elements only */
+	--border: light-dark(oklch(85% 0 0), oklch(30% 0 0));
+	--input: light-dark(oklch(85% 0 0), oklch(30% 0 0));
+	--input-invalid: oklch(60% 0.2 20);
 
-	--destructive: oklch(60% 0.18 0);
-	--destructive-foreground: oklch(98% 0.02 320);
-	--foreground-destructive: oklch(55% 0.18 0);
+	/* Destructive actions */
+	--destructive: oklch(55% 0.22 25);
+	--destructive-foreground: oklch(100% 0 0);
+	--foreground-destructive: oklch(50% 0.22 25);
 
+	/* Focus ring - use brand accent */
 	--ring: oklch(65% 0.15 320);
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: oklch(15% 0.05 320);
-		--foreground: oklch(95% 0.02 320);
-
-		--card: oklch(18% 0.05 320);
-		--card-foreground: oklch(95% 0.02 320);
-
-		--popover: oklch(18% 0.05 320);
-		--popover-foreground: oklch(95% 0.02 320);
-
-		--primary: oklch(70% 0.18 320);
-		--primary-foreground: oklch(15% 0.05 320);
-
-		--secondary: oklch(30% 0.08 330);
-		--secondary-foreground: oklch(95% 0.02 320);
-
-		--muted: oklch(25% 0.06 320);
-		--muted-foreground: oklch(65% 0.05 320);
-
-		--accent: oklch(28% 0.06 340);
-		--accent-foreground: oklch(95% 0.02 320);
-
-		--border: oklch(28% 0.06 320);
-		--input: oklch(28% 0.06 320);
-		--input-invalid: oklch(50% 0.18 0);
-
-		--destructive: oklch(55% 0.18 0);
-		--destructive-foreground: oklch(95% 0.02 320);
-		--foreground-destructive: oklch(65% 0.2 0);
-
-		--ring: oklch(70% 0.18 320);
-	}
 }
 
 @theme inline {
@@ -112,56 +107,43 @@ body {
 }
 
 @theme {
-	--text-mega: 5rem;
-	--text-mega--line-height: 5.25rem;
-	--text-mega--font-weight: 700;
-	--text-h1: 3.5rem;
-	--text-h1--line-height: 3.875rem;
-	--text-h1--font-weight: 700;
-	--text-h2: 2.5rem;
-	--text-h2--line-height: 3rem;
-	--text-h2--font-weight: 700;
-	--text-h3: 2rem;
-	--text-h3--line-height: 2.25rem;
-	--text-h3--font-weight: 700;
-	--text-h4: 1.75rem;
-	--text-h4--line-height: 2.25rem;
-	--text-h4--font-weight: 700;
-	--text-h5: 1.5rem;
-	--text-h5--line-height: 2rem;
-	--text-h5--font-weight: 700;
-	--text-h6: 1rem;
-	--text-h6--line-height: 1.25rem;
-	--text-h6--font-weight: 700;
-	--text-body-2xl: 2rem;
-	--text-body-2xl--line-height: 2.25rem;
-	--text-body-xl: 1.75rem;
-	--text-body-xl--line-height: 2.25rem;
-	--text-body-lg: 1.5rem;
-	--text-body-lg--line-height: 2rem;
-	--text-body-md: 1.25rem;
-	--text-body-md--line-height: 1.75rem;
-	--text-body-sm: 1rem;
+	/* Simplified typography scale per OpenAI Apps SDK guidelines */
+	/* Limit variation in font size, preferring body and body-small sizes */
+	--text-h1: 1.5rem;
+	--text-h1--line-height: 2rem;
+	--text-h1--font-weight: 600;
+	--text-h2: 1.25rem;
+	--text-h2--line-height: 1.75rem;
+	--text-h2--font-weight: 600;
+	--text-h3: 1.125rem;
+	--text-h3--line-height: 1.5rem;
+	--text-h3--font-weight: 600;
+	--text-body: 1rem;
+	--text-body--line-height: 1.5rem;
+	--text-body--font-weight: 400;
+	--text-body-sm: 0.875rem;
 	--text-body-sm--line-height: 1.25rem;
-	--text-body-xs: 0.875rem;
-	--text-body-xs--line-height: 1.125rem;
-	--text-body-2xs: 0.75rem;
-	--text-body-2xs--line-height: 1rem;
-	--text-caption: 1.125rem;
-	--text-caption--line-height: 1.5rem;
-	--text-caption--font-weight: 600;
-	--text-button: 0.75rem;
-	--text-button--line-height: 1rem;
-	--text-button--font-weight: 700;
+	--text-body-sm--font-weight: 400;
+	--text-caption: 0.75rem;
+	--text-caption--line-height: 1rem;
+	--text-caption--font-weight: 500;
 }
 
 @utility container {
+	/* System grid spacing per OpenAI Apps SDK guidelines */
 	margin-inline: auto;
-	padding-inline: 2rem;
+	padding-inline: 1rem;
 
-	@media (width >=1400px) {
+	@media (width >= 768px) {
+		& {
+			padding-inline: 1.5rem;
+		}
+	}
+
+	@media (width >= 1400px) {
 		& {
 			max-width: 1400px;
+			padding-inline: 2rem;
 		}
 	}
 }

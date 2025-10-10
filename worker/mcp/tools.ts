@@ -107,77 +107,77 @@ export async function initializeTools(agent: EpicMeMCP) {
 	)
 
 	agent.authenticatedTools.push(
-		agent.server.registerTool(
-			'view_journal',
-			{
-				title: 'View Journal',
-				description:
-					'View your journal entries in a beautiful, scrollable interface',
-				annotations: {
-					readOnlyHint: true,
-					openWorldHint: false,
-				} satisfies ToolAnnotations,
-			},
-			async () => {
-				const user = await agent.requireUser()
-				const baseUrl = agent.requireDomain()
-				const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
-				const entries = await agent.db.getEntries(user.id)
-				return {
-					content: [
-						createText(
-							`Here's your journal viewer. You can scroll through your entries and expand them to read the full content.`,
-						),
-						createUIResource({
-							uri: `ui://journal-viewer/${user.id}`,
-							content: {
-								type: 'externalUrl',
-								iframeUrl: uiUrl.toString(),
-							},
-							encoding: 'text',
-							uiMetadata: {
-								'initial-render-data': { entries },
-							},
-						}),
-					],
-				}
-			},
-		),
-		agent.server.registerTool(
-			'view_entry',
-			{
-				title: 'View Entry',
-				description: 'View a journal entry by ID visually',
-				annotations: {
-					readOnlyHint: true,
-					openWorldHint: false,
-				} satisfies ToolAnnotations,
-				inputSchema: entryIdSchema,
-			},
-			async ({ id }) => {
-				const user = await agent.requireUser()
-				const baseUrl = agent.requireDomain()
-				const iframeUrl = new URL('/ui/entry-viewer', baseUrl)
-				const entry = await agent.db.getEntry(user.id, id)
-				invariant(entry, `Entry with ID "${id}" not found`)
+		// agent.server.registerTool(
+		// 	'view_journal',
+		// 	{
+		// 		title: 'View Journal',
+		// 		description:
+		// 			'View your journal entries in a beautiful, scrollable interface',
+		// 		annotations: {
+		// 			readOnlyHint: true,
+		// 			openWorldHint: false,
+		// 		} satisfies ToolAnnotations,
+		// 	},
+		// 	async () => {
+		// 		const user = await agent.requireUser()
+		// 		const baseUrl = agent.requireDomain()
+		// 		const uiUrl = new URL(`/ui/journal-viewer`, baseUrl)
+		// 		const entries = await agent.db.getEntries(user.id)
+		// 		return {
+		// 			content: [
+		// 				createText(
+		// 					`Here's your journal viewer. You can scroll through your entries and expand them to read the full content.`,
+		// 				),
+		// 				createUIResource({
+		// 					uri: `ui://journal-viewer/${user.id}`,
+		// 					content: {
+		// 						type: 'externalUrl',
+		// 						iframeUrl: uiUrl.toString(),
+		// 					},
+		// 					encoding: 'text',
+		// 					uiMetadata: {
+		// 						'initial-render-data': { entries },
+		// 					},
+		// 				}),
+		// 			],
+		// 		}
+		// 	},
+		// ),
+		// agent.server.registerTool(
+		// 	'view_entry',
+		// 	{
+		// 		title: 'View Entry',
+		// 		description: 'View a journal entry by ID visually',
+		// 		annotations: {
+		// 			readOnlyHint: true,
+		// 			openWorldHint: false,
+		// 		} satisfies ToolAnnotations,
+		// 		inputSchema: entryIdSchema,
+		// 	},
+		// 	async ({ id }) => {
+		// 		const user = await agent.requireUser()
+		// 		const baseUrl = agent.requireDomain()
+		// 		const iframeUrl = new URL('/ui/entry-viewer', baseUrl)
+		// 		const entry = await agent.db.getEntry(user.id, id)
+		// 		invariant(entry, `Entry with ID "${id}" not found`)
 
-				return {
-					content: [
-						createUIResource({
-							uri: `ui://view-entry/${id}`,
-							content: {
-								type: 'externalUrl',
-								iframeUrl: iframeUrl.toString(),
-							},
-							encoding: 'text',
-							uiMetadata: {
-								'initial-render-data': { entry },
-							},
-						}),
-					],
-				}
-			},
-		),
+		// 		return {
+		// 			content: [
+		// 				createUIResource({
+		// 					uri: `ui://view-entry/${id}`,
+		// 					content: {
+		// 						type: 'externalUrl',
+		// 						iframeUrl: iframeUrl.toString(),
+		// 					},
+		// 					encoding: 'text',
+		// 					uiMetadata: {
+		// 						'initial-render-data': { entry },
+		// 					},
+		// 				}),
+		// 			],
+		// 		}
+		// 	},
+		// ),
 		agent.server.registerTool(
 			'whoami',
 			{
@@ -340,39 +340,39 @@ export async function initializeTools(agent: EpicMeMCP) {
 			},
 		),
 
-		agent.server.registerTool(
-			'update_entry',
-			{
-				title: 'Update Entry',
-				description:
-					'Update a journal entry. Only provided fields will be updated.',
-				annotations: {
-					destructiveHint: false,
-					idempotentHint: true,
-					openWorldHint: false,
-				} satisfies ToolAnnotations,
-				inputSchema: updateEntryInputSchema,
-				outputSchema: { entry: entryWithTagsSchema },
-			},
-			async ({ id, ...updates }) => {
-				const user = await agent.requireUser()
-				const existingEntry = await agent.db.getEntry(user.id, id)
-				invariant(
-					existingEntry,
-					`Entry with ID "${id}" not found. Use list_entries to see all available entries.`,
-				)
-				const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
-				return {
-					structuredContent: { entry: updatedEntry },
-					content: [
-						createText(
-							`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
-						),
-						createEntryResourceLink(updatedEntry),
-					],
-				}
-			},
-		),
+		// agent.server.registerTool(
+		// 	'update_entry',
+		// 	{
+		// 		title: 'Update Entry',
+		// 		description:
+		// 			'Update a journal entry. Only provided fields will be updated.',
+		// 		annotations: {
+		// 			destructiveHint: false,
+		// 			idempotentHint: true,
+		// 			openWorldHint: false,
+		// 		} satisfies ToolAnnotations,
+		// 		inputSchema: updateEntryInputSchema,
+		// 		outputSchema: { entry: entryWithTagsSchema },
+		// 	},
+		// 	async ({ id, ...updates }) => {
+		// 		const user = await agent.requireUser()
+		// 		const existingEntry = await agent.db.getEntry(user.id, id)
+		// 		invariant(
+		// 			existingEntry,
+		// 			`Entry with ID "${id}" not found. Use list_entries to see all available entries.`,
+		// 		)
+		// 		const updatedEntry = await agent.db.updateEntry(user.id, id, updates)
+		// 		return {
+		// 			structuredContent: { entry: updatedEntry },
+		// 			content: [
+		// 				createText(
+		// 					`Entry "${updatedEntry.title}" (ID: ${id}) updated successfully`,
+		// 				),
+		// 				createEntryResourceLink(updatedEntry),
+		// 			],
+		// 		}
+		// 	},
+		// ),
 		agent.server.registerTool(
 			'delete_entry',
 			{
@@ -521,35 +521,35 @@ export async function initializeTools(agent: EpicMeMCP) {
 				}
 			},
 		),
-		agent.server.registerTool(
-			'update_tag',
-			{
-				title: 'Update Tag',
-				description: 'Update a tag',
-				annotations: {
-					destructiveHint: false,
-					idempotentHint: true,
-					openWorldHint: false,
-				} satisfies ToolAnnotations,
-				inputSchema: updateTagInputSchema,
-				outputSchema: { tag: tagSchema },
-			},
-			async ({ id, ...updates }) => {
-				const user = await agent.requireUser()
-				const updatedTag = await agent.db.updateTag(user.id, id, updates)
-				const structuredContent = { tag: updatedTag }
-				return {
-					structuredContent,
-					content: [
-						createText(
-							`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
-						),
-						createTagResourceLink(updatedTag),
-						createText(structuredContent),
-					],
-				}
-			},
-		),
+		// agent.server.registerTool(
+		// 	'update_tag',
+		// 	{
+		// 		title: 'Update Tag',
+		// 		description: 'Update a tag',
+		// 		annotations: {
+		// 			destructiveHint: false,
+		// 			idempotentHint: true,
+		// 			openWorldHint: false,
+		// 		} satisfies ToolAnnotations,
+		// 		inputSchema: updateTagInputSchema,
+		// 		outputSchema: { tag: tagSchema },
+		// 	},
+		// 	async ({ id, ...updates }) => {
+		// 		const user = await agent.requireUser()
+		// 		const updatedTag = await agent.db.updateTag(user.id, id, updates)
+		// 		const structuredContent = { tag: updatedTag }
+		// 		return {
+		// 			structuredContent,
+		// 			content: [
+		// 				createText(
+		// 					`Tag "${updatedTag.name}" (ID: ${id}) updated successfully`,
+		// 				),
+		// 				createTagResourceLink(updatedTag),
+		// 				createText(structuredContent),
+		// 			],
+		// 		}
+		// 	},
+		// ),
 		agent.server.registerTool(
 			'delete_tag',
 			{

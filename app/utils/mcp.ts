@@ -1,3 +1,5 @@
+import '#app/utils/mcp-ui-compat.client.ts'
+
 import { useEffect } from 'react'
 import { type z } from 'zod'
 
@@ -56,16 +58,6 @@ function sendMcpMessage<TypeType extends McpMessageType>(
 	payload: McpMessageTypes[TypeType],
 	options: MessageOptions = {},
 ): McpMessageReturnType<typeof options> {
-	debugger
-	// if (type === 'tool') {
-	// 	// Goose does not currentlly support tool calls, so change this to a prompt
-	// 	const { toolName, params } = payload as McpMessageTypes['tool']
-	// 	type = 'prompt' as TypeType
-	// 	payload = {
-	// 		prompt: `Please call the tool ${toolName} with the following parameters: ${JSON.stringify(params)}`,
-	// 	} as McpMessageTypes[TypeType]
-	// }
-
 	const { signal: givenSignal, schema, timeoutMs = 3_000 } = options
 	const timeoutSignal =
 		typeof timeoutMs === 'number' ? AbortSignal.timeout(timeoutMs) : undefined
@@ -91,6 +83,20 @@ function sendMcpMessage<TypeType extends McpMessageType>(
 		}
 
 		console.log('posting to parent', { type, messageId, payload })
+		if (type === 'tool') {
+			return resolve(
+				// @ts-expect-error ... we'll make this great eventually
+				window.openai.callTool(payload.toolName, payload.params).then((r) => {
+					// @ts-expect-error ... we'll make this great eventually
+					void window.openai.sendFollowUpMessage({
+						// @ts-expect-error ... we'll make this great eventually
+						prompt: `I have called ${payload.toolName} with params ${JSON.stringify(payload.params)} and got the following response: ${JSON.stringify(r)}`,
+					})
+					return r
+				}),
+			)
+		}
+
 		window.parent.postMessage({ type, messageId, payload }, '*')
 
 		function handleMessage(event: MessageEvent) {
@@ -121,68 +127,42 @@ function sendMcpMessage<TypeType extends McpMessageType>(
 
 export { sendMcpMessage }
 
-// Module-level queue for render data events
-const renderDataQueue: Array<{ type: string; payload: any }> = []
-
-// Set up global listener immediately when module loads (only in the client)
-if (typeof document !== 'undefined') {
-	window.addEventListener('message', (event) => {
-		if (event.data?.type === 'ui-lifecycle-iframe-render-data') {
-			renderDataQueue.push(event.data)
+export function waitForRenderData<RenderData>(
+	schema: z.ZodSchema<RenderData>,
+): Promise<RenderData> {
+	let toolOutput = window.openai?.toolOutput
+	if (toolOutput) {
+		const parseResult = schema.safeParse({ toolOutput })
+		if (parseResult.success) {
+			return Promise.resolve(parseResult.data)
 		}
+		throw new Error(parseResult.error.message)
+	}
+
+	return new Promise<RenderData>((resolve, reject) => {
+		Object.defineProperty(window.openai, 'toolOutput', {
+			get() {
+				return toolOutput
+			},
+			set(newValue: any) {
+				toolOutput = newValue
+				const parseResult = schema.safeParse({ toolOutput })
+				if (parseResult.success) {
+					resolve(parseResult.data)
+				} else {
+					reject(new Error(parseResult.error.message))
+				}
+			},
+			configurable: true,
+			enumerable: true,
+		})
 	})
 }
 
-export function waitForRenderData<RenderData>(
-	schema: z.ZodSchema<RenderData>,
-	opts: { signal?: AbortSignal; timeoutMs?: number } = {},
-): Promise<RenderData> {
-	const { signal: givenSignal, timeoutMs = 3_000 } = opts
-	const timeoutSignal =
-		typeof timeoutMs === 'number' ? AbortSignal.timeout(timeoutMs) : undefined
-
-	const signals = [givenSignal, timeoutSignal].filter(Boolean)
-	const signal = AbortSignal.any(signals)
-
-	return new Promise((resolve, reject) => {
-		// Check if we already received the data
-		const queuedEvent = renderDataQueue.find(
-			(event) => event.type === 'ui-lifecycle-iframe-render-data',
-		)
-		if (queuedEvent) {
-			const result = schema.safeParse(queuedEvent.payload.renderData)
-			return result.success ? resolve(result.data) : reject(result.error)
+declare global {
+	interface Window {
+		openai?: {
+			toolOutput?: any
 		}
-
-		// Otherwise, set up the normal listening logic
-
-		function cleanup() {
-			window.removeEventListener('message', handleMessage)
-			signal.removeEventListener?.('abort', onAbort as EventListener)
-		}
-
-		function onAbort() {
-			cleanup()
-			const reason =
-				(signal as any).reason ??
-				new DOMException('Timed out waiting for render data', 'TimeoutError')
-			reject(reason)
-		}
-
-		function handleMessage(event: MessageEvent) {
-			if (event.data?.type !== 'ui-lifecycle-iframe-render-data') return
-
-			const result = schema.safeParse(event.data.payload)
-			cleanup()
-			return result.success ? resolve(result.data) : reject(result.error)
-		}
-
-		signal.addEventListener('abort', onAbort, { once: true })
-		window.addEventListener('message', handleMessage, {
-			once: true,
-			signal,
-		})
-
-		if (signal.aborted) onAbort()
-	})
+	}
 }
