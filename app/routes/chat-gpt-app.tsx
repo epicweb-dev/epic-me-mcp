@@ -1,34 +1,24 @@
-import { sendMcpMessage } from '#app/utils/mcp.ts'
-import '../utils/mcp-ui-compat.client.ts'
+import { z } from 'zod'
+import { sendMcpMessage, waitForRenderData } from '#app/utils/mcp.ts'
+import '#app/utils/mcp-ui-compat.client.ts'
 
-import { type Route } from './+types/index.html.tsx'
+import { type Route } from './+types/chat-gpt-app.tsx'
 
-export function clientLoader() {
-	let toolOutput = window.openai?.toolOutput
-	if (toolOutput) return { toolOutput }
-
-	return new Promise<{ toolOutput: string }>((resolve) => {
-		Object.defineProperty(window.openai, 'toolOutput', {
-			get() {
-				return toolOutput
-			},
-			set(newValue: any) {
-				toolOutput = newValue
-				resolve({ toolOutput: toolOutput ?? 'No tool output' })
-			},
-			configurable: true,
-			enumerable: true,
-		})
+export async function clientLoader() {
+	const renderDataSchema = z.object({
+		message: z.string(),
 	})
+	const renderData = await waitForRenderData(renderDataSchema)
+	return { renderData }
 }
 
 export default function MCPUIWidget({ loaderData }: Route.ComponentProps) {
-	const { toolOutput } = loaderData
+	const { renderData } = loaderData
 	return (
 		<div>
 			<h1 className="text-h1">This is a test widget.</h1>
-			<p>Tool output:</p>
-			<pre>{JSON.stringify(toolOutput, null, 2)}</pre>
+			<p>Render Data:</p>
+			<pre>{JSON.stringify(renderData, null, 2)}</pre>
 			<button
 				onClick={() =>
 					sendMcpMessage('prompt', { prompt: 'Hello, how are you?' })

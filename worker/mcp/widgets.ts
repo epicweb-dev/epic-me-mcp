@@ -14,7 +14,6 @@ type WidgetOutput<Output extends ZodRawShape> = {
 type Widget<Output extends ZodRawShape> = {
 	name: string
 	title: string
-	route: string
 	resultMessage: string
 	description?: string
 	invokingMessage?: string
@@ -35,7 +34,6 @@ const widgets = [
 	createWidget({
 		name: 'test-react-router',
 		title: 'Test React Router',
-		route: '/index.html',
 		description:
 			'Renders an interactive test widget displaying the structured content passed from the tool, including a message confirming successful data transfer.',
 		invokingMessage: 'Getting you the test widget',
@@ -57,7 +55,9 @@ export async function registerWidgets(agent: EpicMeMCP) {
 		const baseUrl = agent.requireDomain()
 		const name = `${widget.name}-${version}`
 		const uri = `ui://widget/${name}.html`
-		const url = new URL(widget.route, baseUrl)
+		// chat gpt hosts your app on their own server and serves it at /index.html
+		const url = new URL('/index.html', baseUrl)
+		// the version is to avoid chatgpt caching between deployments
 		url.searchParams.set('v', version.toString())
 
 		agent.server.registerResource(name, uri, {}, async () => ({
