@@ -1,57 +1,43 @@
-import { type Route } from './+types/catch-all.tsx'
+// This is called a "splat route" and as it's in the root `/app/routes/`
+// directory, it's a catchall. If no other routes match, this one will and we
+// can know that the user is hitting a URL that doesn't exist. By throwing a
+// 404 from the loader, we can force the error boundary to render which will
+// ensure the user gets the right status code and we can display a nicer error
+// message for them than the Remix and/or browser default.
 
-export function clientLoader() {
-	return {
-		toolOutput: window.openai?.toolOutput ?? 'No tool output',
-	}
+import { useLocation } from 'react-router'
+import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
+
+export function loader() {
+	throw new Response('Not found', { status: 404 })
 }
 
-export default function CatchAll({ loaderData }: Route.ComponentProps) {
-	const { toolOutput } = loaderData
+export function action() {
+	throw new Response('Not found', { status: 404 })
+}
+
+export default function NotFound() {
+	// due to the loader, this component will never be rendered, but we'll return
+	// the error boundary just in case.
+	return <ErrorBoundary />
+}
+
+export function ErrorBoundary() {
+	const location = useLocation()
 	return (
-		<div>
-			<h1 className="text-h1">This is a test widget.</h1>
-			<p>Tool output:</p>
-			<pre>{JSON.stringify(toolOutput, null, 2)}</pre>
-		</div>
-	)
-}
-
-declare global {
-	interface Window {
-		openai?: {
-			toolOutput: string
-		}
-	}
-}
-
-export function HydrateFallback() {
-	return (
-		<div className="flex min-h-48 flex-col items-center justify-center py-12">
-			<svg
-				className="text-muted-foreground mb-4 h-8 w-8 animate-spin"
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				aria-label="Loading"
-			>
-				<circle
-					className="opacity-25"
-					cx="12"
-					cy="12"
-					r="10"
-					stroke="currentColor"
-					strokeWidth="4"
-				/>
-				<path
-					className="opacity-75"
-					fill="currentColor"
-					d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-				/>
-			</svg>
-			<p className="text-muted-foreground text-lg">
-				Waiting for tool output...
-			</p>
-		</div>
+		<GeneralErrorBoundary
+			statusHandlers={{
+				404: () => (
+					<div className="flex flex-col gap-6">
+						<div className="flex flex-col gap-3">
+							<h1>We can't find this page:</h1>
+							<pre className="text-body-lg break-all whitespace-pre-wrap">
+								{location.pathname}
+							</pre>
+						</div>
+					</div>
+				),
+			}}
+		/>
 	)
 }
