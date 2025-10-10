@@ -5,7 +5,13 @@ import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
+const buildVersion = Date.now()
+
 export default defineConfig({
+	base: 'https://epic-me-mcp-staging.kentcdodds.workers.dev/',
+	define: {
+		BUILD_VERSION: JSON.stringify(buildVersion),
+	},
 	server: {
 		port: 8877,
 	},
@@ -20,7 +26,10 @@ export default defineConfig({
 				if (id.includes('+types/')) return 'export {}'
 			},
 		},
-		cloudflare({ viteEnvironment: { name: 'ssr' } }),
+		cloudflare({
+			viteEnvironment: { name: 'ssr' },
+			experimental: { headersAndRedirectsDevModeSupport: true },
+		}),
 		tailwindcss(),
 		reactRouter(),
 		tsconfigPaths(),

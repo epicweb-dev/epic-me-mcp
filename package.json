@@ -10,7 +10,9 @@
   },
   "scripts": {
     "build": "react-router build",
+    "build:staging": "cross-env CLOUDFLARE_ENV=staging react-router build",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:staging": "npm run build:staging && wrangler deploy",
     "dev": "react-router dev",
     "format": "prettier --write .",
     "lint": "eslint .",
@@ -43,6 +45,7 @@
     "@types/node": "^24.6.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.36.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",

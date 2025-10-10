@@ -46,15 +46,16 @@ const oauthProvider = new OAuthProvider({
 
 export default {
 	fetch: withCors({
-		getCorsHeaders: (request) => {
-			if (request.url.includes('/.well-known')) {
-				return {
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-					'Access-Control-Allow-Headers': 'mcp-protocol-version',
-					'Cross-Origin-Resource-Policy': 'cross-origin',
-				}
+		getCorsHeaders: () => {
+			// if (request.url.includes('/.well-known')) {
+			return {
+				'Access-Control-Allow-Origin': '*',
+				'Access-Control-Allow-Methods':
+					'GET, HEAD, OPTIONS, POST, DELETE, PUT, PATCH',
+				'Access-Control-Allow-Headers': '*',
+				'Cross-Origin-Resource-Policy': 'cross-origin',
 			}
+			// }
 		},
 		handler: async (request: Request, env: Env, ctx: ExecutionContext) => {
 			return oauthProvider.fetch(request, env, ctx)

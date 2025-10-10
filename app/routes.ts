@@ -6,5 +6,6 @@ export default [
 	route('ui/token-input', 'routes/ui/token-input.tsx'),
 	route('ui/journal-viewer', 'routes/ui/journal-viewer.tsx'),
 	route('ui/entry-viewer', 'routes/ui/entry-viewer.tsx'),
+	route('ui/test', 'routes/ui/test.tsx'),
 	route('/*', 'routes/catch-all.tsx'),
 ] satisfies RouteConfig

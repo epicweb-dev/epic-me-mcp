@@ -45,4 +45,31 @@
 		"binding": "ASSETS",
 		"directory": "./public/",
 	},
+	"env": {
+		"staging": {
+			"name": "epic-me-mcp-staging",
+			"durable_objects": {
+				"bindings": [
+					{
+						"class_name": "EpicMeMCP",
+						"name": "EPIC_ME_MCP_OBJECT",
+					},
+				],
+			},
+			"d1_databases": [
+				{
+					"binding": "EPIC_ME_DB",
+					"database_name": "epic-me-staging",
+					"database_id": "43f17b48-22da-4de1-a1fe-3273956678d7",
+					"migrations_dir": "src/db/migrations",
+				},
+			],
+			"kv_namespaces": [
+				{
+					"binding": "OAUTH_KV",
+					"id": "ac35c0d1f253445788ded69b3201effd",
+				},
+			],
+		},
+	},
 }

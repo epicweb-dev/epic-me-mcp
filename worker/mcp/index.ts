@@ -12,6 +12,7 @@ import { DB } from '../db'
 import { initializePrompts } from './prompts.ts'
 import { initializeResources } from './resources.ts'
 import { initializeTools } from './tools.ts'
+import { registerWidgets } from './widgets.ts'
 
 type State = {}
 export type Props = { grantId: string; grantUserId: string; baseUrl: string }
@@ -92,6 +93,7 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 		await initializeTools(this)
 		await initializeResources(this)
 		await initializePrompts(this)
+		await registerWidgets(this)
 	}
 
 	onStateUpdate(state: State | undefined, source: Connection | 'server') {
