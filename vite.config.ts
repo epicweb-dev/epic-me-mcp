@@ -6,7 +6,10 @@ import devtoolsJson from 'vite-plugin-devtools-json'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-	base: 'https://epic-me-mcp-staging.kentcdodds.workers.dev/',
+	base:
+		process.env.NODE_ENV === 'production'
+			? 'https://epic-me-mcp-staging.kentcdodds.workers.dev/'
+			: undefined,
 	define: { BUILD_TIMESTAMP: JSON.stringify(Date.now()) },
 	server: {
 		port: 8877,

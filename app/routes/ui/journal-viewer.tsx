@@ -13,7 +13,7 @@ import {
 import { useDoubleCheck, useUnmountSignal } from '#app/utils/misc.ts'
 import { type Route } from './+types/journal-viewer.tsx'
 
-export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+export async function clientLoader() {
 	const renderData = await waitForRenderData(
 		z.object({
 			entries: z.array(
@@ -24,7 +24,6 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 				}),
 			),
 		}),
-		{ signal: request.signal, timeoutMs: 3_000 },
 	)
 	return { entries: renderData.entries }
 }

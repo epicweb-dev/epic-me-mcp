@@ -1,17 +1,22 @@
+import { invariant } from '@epic-web/invariant'
 import { type ZodRawShape, z } from 'zod'
+import { entryWithTagsSchema } from '#worker/db/schema.ts'
 import { type EpicMeMCP } from './index.ts'
 
 declare const BUILD_TIMESTAMP: string
 const version = BUILD_TIMESTAMP
 
-type WidgetOutput<Output extends ZodRawShape> = {
+type WidgetOutput<Input extends ZodRawShape, Output extends ZodRawShape> = {
+	inputSchema: Input
 	outputSchema: Output
-	getStructuredContent: () => Promise<{
+	getStructuredContent: (args: {
+		[Key in keyof Input]: z.infer<Input[Key]>
+	}) => Promise<{
 		[Key in keyof Output]: z.infer<Output[Key]>
 	}>
 }
 
-type Widget<Output extends ZodRawShape> = {
+type Widget<Input extends ZodRawShape, Output extends ZodRawShape> = {
 	name: string
 	title: string
 	resultMessage: string
@@ -21,36 +26,40 @@ type Widget<Output extends ZodRawShape> = {
 	widgetAccessible?: boolean
 	widgetPrefersBorder?: boolean
 	resultCanProduceWidget?: boolean
-	inputSchema?: ZodRawShape
-} & WidgetOutput<Output>
+} & WidgetOutput<Input, Output>
 
-function createWidget<Output extends ZodRawShape>(
-	widget: Widget<Output>,
-): Widget<Output> {
+function createWidget<Input extends ZodRawShape, Output extends ZodRawShape>(
+	widget: Widget<Input, Output>,
+): Widget<Input, Output> {
 	return widget
 }
 
-const widgets = [
-	createWidget({
-		name: 'test-react-router',
-		title: 'Test React Router',
-		description:
-			'Renders an interactive test widget displaying the structured content passed from the tool, including a message confirming successful data transfer.',
-		invokingMessage: 'Getting you the test widget',
-		invokedMessage: `Here's the test widget`,
-		resultMessage: 'The test widget has been rendered',
-		widgetAccessible: true,
-		resultCanProduceWidget: true,
-		outputSchema: {
-			message: z.string(),
-		},
-		getStructuredContent: async () => ({
-			message: 'Successfully passed structured content to the widget',
-		}),
-	}),
-]
-
 export async function registerWidgets(agent: EpicMeMCP) {
+	const widgets = [
+		createWidget({
+			name: 'view_entry',
+			title: 'View Entry',
+			description:
+				'Renders an interactive user interface to view a journal entry',
+			invokingMessage: 'Retrieving your journal entry',
+			invokedMessage: `Here's your journal entry`,
+			resultMessage: 'The journal entry has been rendered',
+			widgetAccessible: true,
+			resultCanProduceWidget: true,
+			inputSchema: { id: z.number().describe('The ID of the entry') },
+			outputSchema: { entry: entryWithTagsSchema },
+			getStructuredContent: async ({ id }) => {
+				const user = await agent.requireUser()
+				const entry = await agent.db.getEntry(user.id, id)
+				invariant(
+					entry,
+					`Entry with ID "${id}" not found for user with id "${user.id}"`,
+				)
+				return { entry }
+			},
+		}),
+	]
+
 	for (const widget of widgets) {
 		const baseUrl = agent.requireDomain()
 		const name = `${widget.name}-${version}`
@@ -84,6 +93,7 @@ export async function registerWidgets(agent: EpicMeMCP) {
 			name,
 			{
 				title: widget.title,
+				description: widget.description,
 				_meta: {
 					'openai/widgetDomain': baseUrl,
 					'openai/outputTemplate': uri,
@@ -99,11 +109,11 @@ export async function registerWidgets(agent: EpicMeMCP) {
 				inputSchema: widget.inputSchema,
 				outputSchema: widget.outputSchema,
 			},
-			async () => {
+			async (args) => {
 				return {
 					content: [{ type: 'text', text: widget.resultMessage }],
 					structuredContent: widget.getStructuredContent
-						? await widget.getStructuredContent()
+						? await widget.getStructuredContent(args)
 						: {},
 				}
 			},

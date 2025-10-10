@@ -136,6 +136,9 @@ Always call \`whoami\` first. If unauthenticated: 1) \`authenticate\` with email
 	}
 
 	async updateAvailableItems() {
+		const supportsListUpdates = false
+		if (supportsListUpdates) return
+
 		const { grantId } = this.props ?? {}
 		if (!grantId) return
 
