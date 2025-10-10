@@ -1,8 +1,8 @@
 import { type ZodRawShape, z } from 'zod'
 import { type EpicMeMCP } from './index.ts'
 
-declare const BUILD_VERSION: string
-const version = BUILD_VERSION
+declare const BUILD_TIMESTAMP: string
+const version = BUILD_TIMESTAMP
 
 type WidgetOutput<Output extends ZodRawShape> = {
 	outputSchema: Output

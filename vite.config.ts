@@ -5,13 +5,9 @@ import { defineConfig } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
-const buildVersion = Date.now()
-
 export default defineConfig({
 	base: 'https://epic-me-mcp-staging.kentcdodds.workers.dev/',
-	define: {
-		BUILD_VERSION: JSON.stringify(buildVersion),
-	},
+	define: { BUILD_TIMESTAMP: JSON.stringify(Date.now()) },
 	server: {
 		port: 8877,
 	},
