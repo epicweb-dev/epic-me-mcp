@@ -8,7 +8,9 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 export default defineConfig({
 	base:
 		process.env.NODE_ENV === 'production'
-			? 'https://epic-me-mcp-staging.kentcdodds.workers.dev/'
+			? process.env.CLOUDFLARE_ENV === 'staging'
+				? 'https://epic-me-mcp-staging.kentcdodds.workers.dev/'
+				: 'https://epic-me-mcp.kentcdodds.workers.dev/'
 			: undefined,
 	define: { BUILD_TIMESTAMP: JSON.stringify(Date.now()) },
 	server: {
